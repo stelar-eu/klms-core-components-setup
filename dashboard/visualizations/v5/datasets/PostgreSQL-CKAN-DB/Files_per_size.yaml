@@ -1,0 +1,42 @@
+table_name: Files_per_size
+main_dttm_col: null
+description: Distribution of the size (in mbytes) of the files in the Data Catalog.
+default_endpoint: null
+offset: 0
+cache_timeout: null
+schema: null
+sql: 'SELECT size * 0.000000125 AS mbytes
+
+  FROM resource
+
+  WHERE state = ''active'''
+params: null
+template_params: null
+filter_select_enabled: false
+fetch_values_predicate: null
+extra: null
+uuid: 09621009-9768-4894-bd13-9bc9a30ef5a2
+metrics:
+- metric_name: count
+  verbose_name: null
+  metric_type: null
+  expression: count(*)
+  description: null
+  d3format: null
+  extra: null
+  warning_text: null
+columns:
+- column_name: mbytes
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: DECIMAL
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: ''
+  description: null
+  python_date_format: null
+  extra: null
+version: 1.0.0
+database_uuid: c9b4e1cb-36a2-4447-bd52-1aeea261557d

@@ -1,0 +1,23 @@
+slice_name: Tasks execution time distribution
+viz_type: histogram
+params:
+  datasource: 16__table
+  viz_type: histogram
+  slice_id: 22
+  time_range: No filter
+  all_columns_x:
+  - duration_sec
+  adhoc_filters: []
+  row_limit: 10000
+  groupby: []
+  color_scheme: d3Category10
+  link_length: 5
+  x_axis_label: duration (seconds)
+  show_legend: false
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: fda6c939-4236-48d8-b358-5b0a8f81b819
+version: 1.0.0
+dataset_uuid: 2a9d4141-54d2-4233-93c3-c82059d09431

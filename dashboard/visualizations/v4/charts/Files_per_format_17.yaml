@@ -1,0 +1,33 @@
+slice_name: Files per format
+viz_type: dist_bar
+params:
+  datasource: 17__table
+  viz_type: dist_bar
+  slice_id: 17
+  time_range: No filter
+  metrics:
+  - count
+  adhoc_filters: []
+  groupby:
+  - format
+  columns: []
+  row_limit: 1000
+  order_desc: true
+  color_scheme: supersetColors
+  show_legend: true
+  show_bar_value: false
+  rich_tooltip: true
+  bar_stacked: false
+  y_axis_format: SMART_NUMBER
+  y_axis_bounds:
+  - null
+  - null
+  bottom_margin: auto
+  x_ticks_layout: auto
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: 0511c742-3e1d-4e20-80d8-ac4a6a87f645
+version: 1.0.0
+dataset_uuid: 3afeb4c2-1532-4668-877f-68f9f2662b99

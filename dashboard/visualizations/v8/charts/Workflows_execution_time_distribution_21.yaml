@@ -1,0 +1,23 @@
+slice_name: Workflows execution time distribution
+viz_type: histogram
+params:
+  datasource: 19__table
+  viz_type: histogram
+  slice_id: 21
+  time_range: No filter
+  all_columns_x:
+  - duration_sec
+  adhoc_filters: []
+  row_limit: 10000
+  groupby: []
+  color_scheme: d3Category10
+  link_length: 5
+  x_axis_label: duration (seconds)
+  show_legend: true
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: 1e9d9d0a-0514-4612-b360-5e31d97a7f0c
+version: 1.0.0
+dataset_uuid: 18c019e1-8a6b-420a-87aa-9710a3862a34

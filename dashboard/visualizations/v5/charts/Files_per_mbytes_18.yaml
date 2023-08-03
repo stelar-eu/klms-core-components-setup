@@ -1,0 +1,21 @@
+slice_name: Files_per_mbytes
+viz_type: histogram
+params:
+  datasource: 18__table
+  viz_type: histogram
+  time_range: No filter
+  all_columns_x:
+  - mbytes
+  adhoc_filters: []
+  row_limit: 10000
+  groupby: []
+  color_scheme: supersetColors
+  link_length: 5
+  show_legend: true
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: 258dcb6d-0b24-4074-a353-efb2763ef86c
+version: 1.0.0
+dataset_uuid: 09621009-9768-4894-bd13-9bc9a30ef5a2

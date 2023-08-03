@@ -1,0 +1,52 @@
+table_name: AirFlow_task_execution_time
+main_dttm_col: null
+description: Execution time of tasks in AirFlow.
+default_endpoint: null
+offset: 0
+cache_timeout: null
+schema: airflow
+sql: 'SELECT state, EXTRACT(epoch FROM (end_date - start_date)) AS duration_sec FROM
+  airflow.task_instance '
+params: null
+template_params: null
+filter_select_enabled: false
+fetch_values_predicate: null
+extra: null
+uuid: 2a9d4141-54d2-4233-93c3-c82059d09431
+metrics:
+- metric_name: count
+  verbose_name: null
+  metric_type: null
+  expression: count(*)
+  description: null
+  d3format: null
+  extra:
+    warning_markdown: ''
+  warning_text: null
+columns:
+- column_name: duration_sec
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: FLOAT
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: ''
+  description: null
+  python_date_format: null
+  extra: {}
+- column_name: state
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: ''
+  description: null
+  python_date_format: null
+  extra: {}
+version: 1.0.0
+database_uuid: c9b4e1cb-36a2-4447-bd52-1aeea261557d

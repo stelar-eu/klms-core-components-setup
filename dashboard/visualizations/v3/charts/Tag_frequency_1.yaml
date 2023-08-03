@@ -1,0 +1,23 @@
+slice_name: Tag frequency
+viz_type: word_cloud
+params:
+  datasource: 2__table
+  viz_type: word_cloud
+  slice_id: 1
+  time_range: No filter
+  series: tag
+  metric: count
+  adhoc_filters: []
+  row_limit: 1000
+  sort_by_metric: true
+  size_from: 5
+  size_to: 50
+  rotation: square
+  color_scheme: supersetColors
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: 3c38c7c9-32e5-484a-aa69-c30a245521f4
+version: 1.0.0
+dataset_uuid: 050957d3-1685-4212-96c6-5df0f66ecb55

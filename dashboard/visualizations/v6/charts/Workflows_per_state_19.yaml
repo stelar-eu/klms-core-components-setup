@@ -1,0 +1,31 @@
+slice_name: Workflows per state
+viz_type: pie
+params:
+  datasource: 19__table
+  viz_type: pie
+  time_range: No filter
+  groupby:
+  - state
+  metric: count
+  adhoc_filters: []
+  row_limit: 100
+  sort_by_metric: true
+  color_scheme: supersetColors
+  show_labels_threshold: 5
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  label_type: key
+  number_format: SMART_NUMBER
+  date_format: smart_date
+  show_labels: true
+  labels_outside: true
+  outerRadius: 70
+  innerRadius: 30
+  extra_form_data: {}
+  dashboards:
+  - 1
+cache_timeout: null
+uuid: 6f8e5be2-3ef3-414f-bb24-0f60fcde098f
+version: 1.0.0
+dataset_uuid: 18c019e1-8a6b-420a-87aa-9710a3862a34

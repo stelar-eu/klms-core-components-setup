@@ -1,0 +1,51 @@
+table_name: Workflows_per_state
+main_dttm_col: null
+description: State and execution time of workflows.
+default_endpoint: null
+offset: 0
+cache_timeout: null
+schema: airflow
+sql: SELECT state, EXTRACT(epoch FROM (end_date -start_date)) AS duration_sec FROM
+  airflow.dag_run
+params: null
+template_params: null
+filter_select_enabled: false
+fetch_values_predicate: null
+extra: null
+uuid: 18c019e1-8a6b-420a-87aa-9710a3862a34
+metrics:
+- metric_name: count
+  verbose_name: null
+  metric_type: null
+  expression: count(*)
+  description: null
+  d3format: null
+  extra: null
+  warning_text: null
+columns:
+- column_name: duration_sec
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: FLOAT
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: ''
+  description: null
+  python_date_format: null
+  extra: null
+- column_name: state
+  verbose_name: null
+  is_dttm: false
+  is_active: true
+  type: STRING
+  advanced_data_type: null
+  groupby: true
+  filterable: true
+  expression: ''
+  description: null
+  python_date_format: null
+  extra: null
+version: 1.0.0
+database_uuid: c9b4e1cb-36a2-4447-bd52-1aeea261557d

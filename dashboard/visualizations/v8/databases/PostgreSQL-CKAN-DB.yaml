@@ -1,0 +1,15 @@
+database_name: PostgreSQL-CKAN-DB
+sqlalchemy_uri: postgresql+psycopg2://USERNAME:PASSWORD@host.docker.internal:PORT/DATABASE
+cache_timeout: null
+expose_in_sqllab: true
+allow_run_async: false
+allow_ctas: false
+allow_cvas: false
+allow_file_upload: false
+extra:
+  metadata_params: {}
+  engine_params: {}
+  metadata_cache_timeout: {}
+  schemas_allowed_for_file_upload: []
+uuid: c9b4e1cb-36a2-4447-bd52-1aeea261557d
+version: 1.0.0
