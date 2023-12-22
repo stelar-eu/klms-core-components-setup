@@ -1,4 +1,4 @@
-# Docker Compose setup for CKAN
+# Docker Compose setup for Data Catalog in CKAN
 
 
 * [Overview](#overview)
@@ -42,7 +42,7 @@ Use this if you are a maintainer and will not be making code changes to CKAN or 
 
 Copy the included `.env.example` and rename it to `.env`. Modify it depending on your own needs.
 
-The docker compose file also specifies SQL scripts located under directory $/schema-extension$ that will be executed in the PostgreSQL database in order to create custom schemata for KLMS ontology, as well as metadata about workflows (AirFlow) and tasks (MLFlow).
+The docker compose file also specifies SQL scripts located under directory `/schema-extension` that will be executed in the PostgreSQL database in order to create custom schemata for KLMS ontology, as well as metadata about workflows (AirFlow) and tasks (MLFlow).
 
 Note that when accessing CKAN directly (via a browser) ie: not going through NGINX you will need to make sure you have "ckan" set up
 to be an alias to localhost in the local hosts file. Either that or you will need to change the `.env` entry for CKAN_SITE_URL
