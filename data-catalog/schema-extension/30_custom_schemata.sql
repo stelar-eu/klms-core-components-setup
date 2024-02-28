@@ -71,12 +71,13 @@ CREATE TABLE klms.numerical_distribution
 --           DATASETS (actually CKAN resources)
 --****************************************************
 
--- IMPORTANT! Currently, profiling assumes a collection of rasters; however, a CKAN resource can be a single file only.
--- ASSUMPTION: Ingest profiling information regarding the first raster into the database.
+-- IMPORTANT! Currently, profiling assumes a collection of rasters; although CKAN resource can be a single file only, in the database we keep info about each raster image (distinguished by its "name" in the profile).
+-- ASSUMPTION: Ingest profiling information regarding raster imagery into the database.
 -- CAUTION! Temporal-related information NOT available in currently extracted profiles from raster datasets.
 
 CREATE TABLE klms.raster
 ( resource_id text NOT NULL,
+  name text,
   format text,
   height integer,
   width integer,
@@ -87,7 +88,7 @@ CREATE TABLE klms.raster
   end_date timestamp,
   temporal_resolution text,
   no_data_value text,
-  PRIMARY KEY (resource_id),
+  PRIMARY KEY (resource_id, name),
   CONSTRAINT fk_raster_id FOREIGN KEY(resource_id) REFERENCES public.resource(id) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -192,11 +193,12 @@ AFTER DELETE ON klms.rdfgraph FOR EACH ROW EXECUTE FUNCTION klms.syncRdfDistribu
 
 
 
--- IMPORTANT! Currently, profiling assumes a collection of texts; however, a CKAN resource can be a single file only.
--- ASSUMPTION: Ingest profiling information regarding the first text from the corpus into the database.
+-- IMPORTANT! Currently, profiling assumes a collection of texts; although CKAN resource can be a single file only, in the database we keep info about each text document (distinguished by its "name" in the profile).
+-- ASSUMPTION: Ingest profiling information regarding each text document from the corpus into the database.
 
 CREATE TABLE klms.text
 ( resource_id text NOT NULL,
+  name text,
   language text,
   num_sentences integer,
   num_words integer,
@@ -209,7 +211,7 @@ CREATE TABLE klms.text
   word_length_distribution text,
   special_characters_distribution text,
   language_distribution text,
-  PRIMARY KEY (resource_id),
+  PRIMARY KEY (resource_id, name),
   CONSTRAINT fk_text_id FOREIGN KEY(resource_id) REFERENCES public.resource(id) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT fk_sentence_length_distribution FOREIGN KEY(sentence_length_distribution) REFERENCES klms.numerical_distribution(distr_id),
   CONSTRAINT fk_word_length_distribution FOREIGN KEY(word_length_distribution) REFERENCES klms.numerical_distribution(distr_id)
@@ -246,7 +248,6 @@ $funcTextDistr$ LANGUAGE plpgsql;
 
 CREATE TRIGGER klms_trigger_TextDistr
 AFTER DELETE ON klms.text FOR EACH ROW EXECUTE FUNCTION klms.syncTextDistribution();
-
 
 
 
@@ -338,7 +339,6 @@ AFTER DELETE ON klms.textual_attribute FOR EACH ROW EXECUTE FUNCTION klms.syncTe
 
 
 
-
 CREATE TABLE klms.numerical_attribute
 ( attr_id text NOT NULL,
   value_distribution text,
@@ -346,6 +346,8 @@ CREATE TABLE klms.numerical_attribute
   CONSTRAINT fk_numerical_attr_id FOREIGN KEY(attr_id) REFERENCES klms.attribute(attr_id) ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT fk_numerical_value_distribution FOREIGN KEY(value_distribution) REFERENCES klms.numerical_distribution(distr_id)
 );
+
+-- Using a trigger to handle deletions for distributions:
 
 CREATE OR REPLACE FUNCTION klms.syncNumAttrDistribution() RETURNS trigger AS $funcNumAttrDistr$
 DECLARE
@@ -361,6 +363,45 @@ $funcNumAttrDistr$ LANGUAGE plpgsql;
 
 CREATE TRIGGER klms_trigger_NumAttrDistr
 AFTER DELETE ON klms.numerical_attribute FOR EACH ROW EXECUTE FUNCTION klms.syncNumAttrDistribution();
+
+
+-- Extra class specifically bands (as attributes) in rasters:
+
+CREATE TABLE klms.band_attribute
+( raster_name text NOT NULL,
+  attr_id text NOT NULL,
+  value_distribution text,
+  no_data_distribution text,
+  PRIMARY KEY (raster_name, attr_id),
+  CONSTRAINT fk_band_attr_id FOREIGN KEY(attr_id) REFERENCES klms.attribute(attr_id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_band_value_distribution FOREIGN KEY(value_distribution) REFERENCES klms.numerical_distribution(distr_id)
+);
+
+
+-- Foreign key NOT possible to apply, due to primary key restrictions:
+--   CONSTRAINT fk_band_raster_name FOREIGN KEY(raster_name) REFERENCES klms.raster(name) ON UPDATE CASCADE ON DELETE CASCADE,
+-- CONSTRAINT fk_band_nodata_distribution FOREIGN KEY(no_data_distribution) REFERENCES klms.categorical_distribution(distr_id) ON UPDATE CASCADE ON DELETE CASCADE
+-- Instead, using a trigger to handle deletions for all distributions:
+
+CREATE OR REPLACE FUNCTION klms.syncBandAttrDistribution() RETURNS trigger AS $funcBandAttrDistr$
+DECLARE
+   valdistr_id text;
+   nodatadistr_id text;
+BEGIN
+   valdistr_id := (OLD).value_distribution; 
+   nodatadistr_id := (OLD).no_data_distribution; 
+   DELETE FROM klms.numerical_distribution N
+   WHERE N.distr_id = valdistr_id;
+   DELETE FROM klms.categorical_distribution C
+   WHERE C.distr_id = nodatadistr_id;
+   RETURN OLD;
+END
+$funcBandAttrDistr$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER klms_trigger_BandAttrDistr
+AFTER DELETE ON klms.band_attribute FOR EACH ROW EXECUTE FUNCTION klms.syncBandAttrDistribution();
+
 
 
 
