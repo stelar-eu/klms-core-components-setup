@@ -20,7 +20,7 @@ CREATE TABLE klms.workflow_execution
   "state" state_enum NOT NULL, 
   start_date timestamp,
   end_date timestamp,
---  package_id text,
+  package_id text,
   PRIMARY KEY (workflow_uuid)
 --,  CONSTRAINT fk_workflow_id FOREIGN KEY(package_id) REFERENCES public.package(id) ON UPDATE CASCADE ON DELETE CASCADE
 );
