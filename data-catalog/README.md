@@ -68,7 +68,7 @@ Specify extra volumes (e.g., for optional SQL scripts) and port mappings in the 
 
 This SQL script will be used to create custom schemata (KLMS ontology, workflow metadata) in the same database used and maintained by CKAN.
 
-*IMPORTANT!* Make sure that this `30_custom_schemata.sql` file has enabled execution permissions for all users. 
+*IMPORTANT!* Make sure that this `30_custom_schemata.sql` file is copied under `pg_scripts` and it has enabled execution permissions for all users. 
 
 
 ## 5.  Install (build and run) CKAN plus dependencies (Base mode)
