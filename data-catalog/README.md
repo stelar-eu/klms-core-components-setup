@@ -106,7 +106,7 @@ Once `ckan` container is up-and-running, enter inside the container:
 
 Configuration file in the ckan container can be found in this path: `/srv/app/ckan.ini`. Open the config and modify this property to set it to the publicly accessible URL:
 
-	ckan.site_url = CKAN_SITE_URL
+	ckan.site_url = <CKAN_SITE_URL>
 
 Also, specify the correct credentials (user, password, database) for connection to PostgreSQL database:
 
