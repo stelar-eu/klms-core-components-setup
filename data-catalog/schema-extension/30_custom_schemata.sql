@@ -2,13 +2,14 @@
 
 -------------------------------
 -- Schema for AirFlow metadata
+-- NO LONGER USED
 -------------------------------
 
-CREATE SCHEMA airflow;
+-- CREATE SCHEMA airflow;
 
-CREATE USER airflow_user WITH PASSWORD 'airflow_pass';
+-- CREATE USER airflow_user WITH PASSWORD 'airflow_pass';
 
-GRANT ALL PRIVILEGES ON SCHEMA airflow TO airflow_user;
+-- GRANT ALL PRIVILEGES ON SCHEMA airflow TO airflow_user;
 
 ------------------------------
 -- Schema for MLFlow metadata 
