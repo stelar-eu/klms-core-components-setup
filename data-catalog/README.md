@@ -96,7 +96,7 @@ At the end of the container start sequence there should be 6 containers running
 
 After this step, CKAN should be running at `CKAN_SITE_URL`.
 
-*CAUTION!* If CKAN plugins (e.g., [geospatial](https://github.com/ckan/ckanext-spatial), [keycloak](https://github.com/keitaroinc/ckanext-keycloak)) have been specified in the `.env` file, then the status of CKAN deployment will be shown as waiting. Stop deployment (Ctrl+C) after a few minutes once all images have been created. Containers for `ckan` and `nginx` should be manually restarted after the specified plugins have been installed from within the container.
+*CAUTION!* If CKAN plugins (e.g., [spatial](https://github.com/ckan/ckanext-spatial), [keycloak](https://github.com/keitaroinc/ckanext-keycloak)) have been specified in the `.env` file, then the status of CKAN deployment will be shown as waiting. Stop deployment (Ctrl+C) after a few minutes once all images have been created. Containers for `ckan` and `nginx` should be manually restarted after the specified plugins have been installed from within the container.
 
 ## 6.  Post-install configuration for CKAN
 
@@ -117,3 +117,7 @@ Then, exit the container and restart it:
 	docker restart ckan
 
 At this stage, a healthy CKAN installation should be available with its GUI at the publicly accessible URL (unless plugins have NOT been installed yet). Use the admin credentials to enter the GUI and create organizations and users, publish packages, etc.
+
+## 7.  Installing CKAN plugins
+
+To install CKAN plugins (like [spatial](https://github.com/ckan/ckanext-spatial), [geoview](https://github.com/ckan/ckanext-geoview) or [keycloak](https://github.com/keitaroinc/ckanext-keycloak)), follow these [instructions](https://docs.ckan.org/en/2.9/maintaining/installing/install-from-docker-compose.html#add-extensions).
