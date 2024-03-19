@@ -69,7 +69,7 @@ Specify extra volumes (e.g., for optional SQL scripts) and port mappings in the 
 	  	- ./pg_scripts/30_custom_schemata.sql:/docker-entrypoint-initdb.d/30_custom_schemata.sql
 
 
-This SQL script will be used to create custom schemata (KLMS ontology, workflow metadata) in the same database used and maintained by CKAN.
+This SQL script will be used to create custom schemata (KLMS ontology, workflow metadata) in the same database used and maintained by CKAN. The `geometry` column included in certain tables requires installation of PostGIS.
 
 *IMPORTANT!* Make sure that this `30_custom_schemata.sql` file is copied under `pg_scripts` and it has enabled execution permissions for all users. 
 
