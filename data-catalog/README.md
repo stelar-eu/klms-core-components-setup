@@ -4,7 +4,10 @@
 * [Overview](#overview)
 * [Installing Docker](#installing-docker)
 * [docker compose vs docker-compose](#docker-compose-vs-docker-compose)
+* [Prepare CKAN deployment for KLMS](#prepare-ckan-deployment-for-klms)
 * [Install CKAN plus dependencies](#install-ckan-plus-dependencies)
+* [Post-install configuration for CKAN](#post-install-configuration-for-ckan)
+* [Installing CKAN plugins](#installing-ckan-plugins)
 
 
 ## 1.  Overview
@@ -36,7 +39,7 @@ All Docker Compose commands in this README will use the V2 version of Compose ie
 used the `docker-compose` command. Please see [Docker Compose](https://docs.docker.com/compose/compose-v2/) for
 more information.
 
-## 4.  Prepare CKAN plus dependencies for KLMS (Base mode)
+## 4.  Prepare CKAN deployment for KLMS
 
 Use this if you are a maintainer and will not be making code changes to CKAN or to CKAN extensions.
 
