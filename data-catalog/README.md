@@ -36,15 +36,44 @@ All Docker Compose commands in this README will use the V2 version of Compose ie
 used the `docker-compose` command. Please see [Docker Compose](https://docs.docker.com/compose/compose-v2/) for
 more information.
 
-## 4.  Install (build and run) CKAN plus dependencies (Base mode)
+## 4.  Prepare CKAN plus dependencies for KLMS (Base mode)
 
 Use this if you are a maintainer and will not be making code changes to CKAN or to CKAN extensions.
 
 Copy the included `.env.example` and rename it to `.env`. Modify it depending on your own needs.
 
-The docker compose file also specifies SQL scripts located under directory `/schema-extension` that will be executed in the PostgreSQL database in order to create custom schemata for KLMS ontology, as well as metadata about workflows (AirFlow) and tasks (MLFlow).
+*IMPORTANT!* To install [PostGIS extension](https://postgis.net/) and make it accessible from the PostgreSQL database used by CKAN, in the `Dockerfile` under directory `ckan-docker/postgresql/` specify this image:
 
-Note that when accessing CKAN directly (via a browser) ie: not going through NGINX you will need to make sure you have "ckan" set up
+`FROM postgis/postgis:12-3.3-alpine`
+
+instead of `FROM postgres:12-alpine`.
+
+*IMPORTANT!* The docker compose file also specifies SQL scripts located under directory `/schema-extension` that will be executed in the PostgreSQL database in order to create custom schemata for KLMS ontology, as well as metadata about workflows (AirFlow) and tasks (MLFlow).
+
+Specify extra volumes (e.g., for optional SQL scripts) and port mappings in the respective sections in `docker-compose.yml`:
+
+`volumes:
+  ...
+  pg_scripts:
+  ...
+services:
+  ...
+
+ db:
+	...
+  	context: postgresql
+  	...
+  	- ./pg_scripts/30_custom_schemata.sql:/docker-entrypoint-initdb.d/30_custom_schemata.sql`
+
+
+This SQL script will be used to create custom schemata (KLMS ontology, workflow metadata) in the same database used and maintained by CKAN.
+
+*IMPORTANT!* Make sure that this `30_custom_schemata.sql` file has enabled execution permissions for all users. 
+
+
+## 5.  Install (build and run) CKAN plus dependencies (Base mode)
+
+When accessing CKAN directly (via a browser) ie: not going through NGINX you will need to make sure you have "ckan" set up
 to be an alias to localhost in the local hosts file. Either that or you will need to change the `.env` entry for CKAN_SITE_URL
 
 Using the default values on the `.env.example` file will get you a working CKAN instance. There is a sysadmin user created by default with the values defined in `CKAN_SYSADMIN_NAME` and `CKAN_SYSADMIN_PASSWORD`(`ckan_admin` and `test1234` by default). This should be obviously changed before running this setup as a public CKAN instance.
@@ -67,3 +96,24 @@ At the end of the container start sequence there should be 6 containers running
 
 After this step, CKAN should be running at `CKAN_SITE_URL`.
 
+*CAUTION!* If CKAN plugins (e.g., [geospatial](https://github.com/ckan/ckanext-spatial), [keycloak](https://github.com/keitaroinc/ckanext-keycloak)) have been specified in the `.env` file, then the status of CKAN deployment will be shown as waiting. Stop deployment (Ctrl+C) after a few minutes once all images have been created. Containers for `ckan` and `nginx` should be manually restarted after the specified plugins have been installed from within the container.
+
+## 6.  Post-install configuration for CKAN
+
+Once `ckan` container is up-and-running, enter inside the container:
+
+	docker exec -u root -it ckan /bin/bash -c "export TERM=xterm; exec bash"
+
+Configuration file in the ckan container can be found in this path: `/srv/app/ckan.ini`. Open the config and modify this property to set it to the publicly accessible URL:
+
+	ckan.site_url = CKAN_SITE_URL
+
+Also, specify the correct credentials (user, password, database) for connection to PostgreSQL database:
+
+	sqlalchemy.url = postgresql://<ckan-user>:<ckan-pass>@db/<ckan-database>
+
+Then, exit the container and restart it:
+
+	docker restart ckan
+
+At this stage, a healthy CKAN installation should be available with its GUI at the publicly accessible URL (unless plugins have NOT been installed yet). Use the admin credentials to enter the GUI and create organizations and users, publish packages, etc.
