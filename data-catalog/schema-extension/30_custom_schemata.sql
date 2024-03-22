@@ -1,5 +1,9 @@
 -- ***************************************
 
+-- Create PostGIS extension required for geospatial data management
+
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 -------------------------------
 -- Schema for AirFlow metadata
 -- NO LONGER USED
@@ -119,6 +123,7 @@ CREATE TABLE klms.parameters
 
 CREATE TABLE klms.task_input
 ( task_uuid varchar(64) NOT NULL,
+  order_num smallint,
   dataset_id text NOT NULL, 
   PRIMARY KEY (task_uuid, dataset_id),
   CONSTRAINT fk_task_input_uuid FOREIGN KEY(task_uuid) REFERENCES klms.task_execution(task_uuid) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -130,6 +135,7 @@ CREATE TABLE klms.task_input
 
 CREATE TABLE klms.task_output
 ( task_uuid varchar(64) NOT NULL,
+  order_num smallint,
   dataset_id text NOT NULL, 
   PRIMARY KEY (task_uuid, dataset_id),
   CONSTRAINT fk_task_output_uuid FOREIGN KEY(task_uuid) REFERENCES klms.task_execution(task_uuid) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -139,13 +145,9 @@ CREATE TABLE klms.task_output
 
 -- ***************************************
 
--- This schema should have been created from 30_custom_schemata.sql
-
--- CREATE SCHEMA klms;
-
----------------------------------------------------------------------
--- Extended schema for data profiling information from KLMS ontology
----------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-- Extended schema for data profiling information according to KLMS ontology
+-----------------------------------------------------------------------------
 
 -- ************* ISSUES ********************
 -- TODO: Tables NOT yet included in the relational schema:
