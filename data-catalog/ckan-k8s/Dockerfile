@@ -84,5 +84,6 @@ RUN for d in $APP_DIR/patches/*; do \
         fi ; \
     done
 
+
 # Make everything owned by ckan:ckan
 RUN chown ckan:ckan -R /srv/app
