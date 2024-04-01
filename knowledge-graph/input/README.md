@@ -2,7 +2,7 @@
 
 Place in this folder these configuration files required by Ontop:
 
-* Connection details to an existing PostgreSQL database in file `db.properties'.
+* Connection details to an existing PostgreSQL database in file `db.properties`.
 
 * KLMS mappings from the STELAR Data Catalog to the virtual Knowledge Graph in file `klms-mappings.obda`. Make sure that you use the latest version of these [KLMS mappings](https://github.com/stelar-eu/klms-ontology/blob/main/mappings/klms-mappings.obda).
 
