@@ -67,6 +67,11 @@ CREATE TABLE klms.workflow_tag
   CONSTRAINT fk_workflow_tag_uuid FOREIGN KEY(workflow_uuid) REFERENCES klms.workflow_execution(workflow_uuid) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+-- Index key value pairs for faster search:
+
+CREATE INDEX klms_workflow_tag_idx_key ON klms.workflow_tag(key);
+CREATE INDEX klms_workflow_tag_idx_value ON klms.workflow_tag(value);
+
 ---------------------------------------------
 --           TASK EXECUTIONS
 ---------------------------------------------
@@ -96,6 +101,12 @@ CREATE TABLE klms.task_tag
   CONSTRAINT fk_task_tag_uuid FOREIGN KEY(task_uuid) REFERENCES klms.task_execution(task_uuid) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+-- Index key value pairs for faster search:
+
+CREATE INDEX klms_task_tag_idx_key ON klms.task_tag(key);
+CREATE INDEX klms_task_tag_idx_value ON klms.task_tag(value);
+
+
 -- DROP TABLE klms.metrics;
 
 CREATE TABLE klms.metrics
@@ -107,6 +118,11 @@ CREATE TABLE klms.metrics
   CONSTRAINT fk_task_metrics_uuid FOREIGN KEY(task_uuid) REFERENCES klms.task_execution(task_uuid) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+-- Index key value pairs for faster search:
+
+CREATE INDEX klms_metrics_idx_key ON klms.metrics(key);
+CREATE INDEX klms_metrics_idx_value ON klms.metrics(value);
+
 
 -- DROP TABLE klms.parameters;
 
@@ -117,6 +133,11 @@ CREATE TABLE klms.parameters
   PRIMARY KEY (task_uuid, "key"),
   CONSTRAINT fk_task_parameters_uuid FOREIGN KEY(task_uuid) REFERENCES klms.task_execution(task_uuid) ON UPDATE CASCADE ON DELETE CASCADE
 );
+
+-- Index key value pairs for faster search:
+
+CREATE INDEX klms_parameters_idx_key ON klms.parameters(key);
+CREATE INDEX klms_parameters_idx_value ON klms.parameters(value);
 
 
 -- DROP TABLE klms.task_input;
