@@ -168,46 +168,48 @@ CREATE OR REPLACE VIEW package_velocity AS
 -- CAUTION! A package may contain multiple raster images -> multiple profiles -> taking the min percentage
 
 CREATE OR REPLACE VIEW profile_vista_min_cloud_coverage AS 
-  SELECT PR.id, min(N.percentage) AS value
-  FROM public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
-  WHERE PR.id = R.resource_id
+  SELECT P.id, min(N.percentage) AS value
+  FROM public.package P, public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
+  WHERE P.id = PR.package_id
+  AND PR.id = R.resource_id
   AND PR.state = 'active'
   AND R.name = B.raster_name
   AND A.attr_id = B.attr_id
   AND B.no_data_distribution = N.distr_id
   AND A.type ='Band'
   AND N.type='clouds'
-  GROUP BY PR.id;
+  GROUP BY P.id;
 
 
 -- MISSING values in RASTER data as specified in the PROFILING information
 -- CAUTION! A package may contain multiple raster images -> multiple profiles -> taking the min percentage
 
 CREATE OR REPLACE VIEW profile_vista_min_missing AS 
-  SELECT PR.id, min(N.percentage) AS value
-  FROM public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
-  WHERE PR.id = R.resource_id
+  SELECT P.id, min(N.percentage) AS value
+  FROM public.package P, public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
+  WHERE P.id = PR.package_id
+  AND PR.id = R.resource_id
   AND PR.state = 'active'
   AND R.name = B.raster_name
   AND A.attr_id = B.attr_id
   AND B.no_data_distribution = N.distr_id
   AND A.type ='Band'
   AND N.type='missing'
-  GROUP BY PR.id;
+  GROUP BY P.id;
 
 
 -- LAI values in RASTER data as specified in the PROFILING information
 -- CAUTION! A package may contain multiple raster images -> multiple profiles -> taking the max percentage
 
 CREATE OR REPLACE VIEW profile_vista_max_lai AS 
-  SELECT PR.id, max(N.percentage) AS value
-  FROM public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
-  WHERE PR.id = R.resource_id
+  SELECT P.id, max(N.percentage) AS value
+  FROM public.package P, public.resource PR, klms.raster R, klms.attribute A, klms.band_attribute B, klms.categorical_distribution N
+  WHERE P.id = PR.package_id
+  AND PR.id = R.resource_id
   AND PR.state = 'active'
   AND R.name = B.raster_name
   AND A.attr_id = B.attr_id
   AND B.no_data_distribution = N.distr_id
   AND A.type ='Band'
   AND N.type='LAI'
-  GROUP BY PR.id;
-
+  GROUP BY P.id;
