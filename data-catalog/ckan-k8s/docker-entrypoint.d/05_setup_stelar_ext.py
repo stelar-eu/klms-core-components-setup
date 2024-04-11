@@ -85,6 +85,9 @@ def add_option_from_env(envvar: str, dflt:str ="", opsection: str|None = None):
     opvalue = os.environ.get(envvar, dflt)
     add_option(opname, opvalue, opsection)
 
+@logger.wrap
+def setup_root_path():
+    add_option_from_env("CKAN__ROOT_PATH")
 
 @logger.wrap
 def setup_keycloak():
@@ -158,6 +161,7 @@ if __name__ == '__main__':
     logging.info(f"Configuring {ckan_ini} for STELAR extensions.")
     logger.logger = logging.getLogger("stelar")
 
+    setup_root_path()
     setup_keycloak()
     setup_spatial()
     setup_klms_schema()
