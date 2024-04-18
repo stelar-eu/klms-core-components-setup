@@ -85,6 +85,9 @@ def add_option_from_env(envvar: str, dflt:str ="", opsection: str|None = None):
     opvalue = os.environ.get(envvar, dflt)
     add_option(opname, opvalue, opsection)
 
+@logger.wrap
+def setup_root_path():
+    add_option_from_env("CKAN__ROOT_PATH")
 
 @logger.wrap
 def setup_keycloak():
@@ -114,15 +117,12 @@ def setup_spatial():
     if os.environ.get('CKAN__SPATIAL_REBUILD_INDEX', None):
         ckan_exec(['ckan', f'--config={ckan_ini}', 'search-index', 'rebuild'])
 
-    map_type = os.environ.get('CKANEXT__SPATIAL__COMMON_MAP__TYPE', None)
-    match map_type:
-        case 'mapbox':
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__TYPE')
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__MAPBOX__MAP_ID', 'mapbox.satellite')
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__ACCESS_TOKEN', 'DANGER:notgiven')
-
-        case _:
-            pass
+    # Copy the env-based configuration for common_map to ckan.ini
+    SCM_PREFIX = "CKANEXT__SPATIAL__COMMON_MAP__"
+    if SCM_PREFIX+'TYPE' in os.environ:
+        opts = [opt for opt in os.environ if opt.startswith(SCM_PREFIX)]
+        for opt in opts:
+            add_option_from_env(opt, os.environ[opt])
 
 
 @logger.wrap
@@ -158,6 +158,7 @@ if __name__ == '__main__':
     logging.info(f"Configuring {ckan_ini} for STELAR extensions.")
     logger.logger = logging.getLogger("stelar")
 
+    setup_root_path()
     setup_keycloak()
     setup_spatial()
     setup_klms_schema()
