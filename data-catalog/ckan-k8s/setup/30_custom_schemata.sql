@@ -632,3 +632,19 @@ $funcGeomAttrDistr$ LANGUAGE plpgsql;
 CREATE TRIGGER klms_trigger_GeomAttrDistr
 AFTER DELETE ON klms.geometry_attribute FOR EACH ROW EXECUTE FUNCTION klms.syncGeomAttrDistribution();
 
+-- CREATE is_valid_json function used by ontop (Caused error if not exists)
+
+CREATE OR REPLACE FUNCTION public.is_valid_json(input_text TEXT)
+    RETURNS BOOLEAN
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    PERFORM input_text::json;
+    RETURN TRUE;
+EXCEPTION
+    WHEN others THEN
+        RETURN FALSE;
+END;
+$$;
+
+
