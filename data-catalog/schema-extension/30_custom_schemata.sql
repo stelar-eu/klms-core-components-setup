@@ -4,6 +4,10 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 
+-- Enable extension for handling and generating UUIDs
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -------------------------------
 -- Schema for AirFlow metadata
 -- NO LONGER USED
