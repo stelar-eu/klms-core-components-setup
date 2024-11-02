@@ -95,10 +95,10 @@ def check_solr_connection(retry=None):
 def init_db():
 
     db_command = ["ckan", "-c", ckan_ini, "db", "init"]
-    print("[prerun] Initializing or upgrading db - start")
+    print("[prerun] Initializing CKAN database schema - start")
     try:
         subprocess.check_output(db_command, stderr=subprocess.STDOUT)
-        print("[prerun] Initializing or upgrading db - end")
+        print("[prerun] Initializing CKAN database schema - end")
     except subprocess.CalledProcessError as e:
         if "OperationalError" in e.output:
             print(e.output)

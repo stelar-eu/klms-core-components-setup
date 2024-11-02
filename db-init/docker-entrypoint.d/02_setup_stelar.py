@@ -2,7 +2,6 @@ import os
 import subprocess
 import logging
 
-
 # A convenient wrapper for logging
 class StackLogger(logging.LoggerAdapter):
     def __init__(self, logger, extra={}):
@@ -85,9 +84,12 @@ def add_option_from_env(envvar: str, dflt:str ="", opsection: str|None = None):
     opvalue = os.environ.get(envvar, dflt)
     add_option(opname, opvalue, opsection)
 
+@logger.wrap
+def setup_root_path():
+    add_option_from_env("CKAN__ROOT_PATH")
 
 @logger.wrap
-def setup_keycloak():
+def setup_keycloak_ext():
     add_option_from_env("CKANEXT__KEYCLOAK__SERVER_URL")
     add_option_from_env("CKANEXT__KEYCLOAK__CLIENT_ID")
 
@@ -99,14 +101,13 @@ def setup_keycloak():
 
 
 @logger.wrap
-def setup_spatial():
+def setup_spatial_ext():
     log = logging.getLogger('setup_spatial')
 
     add_option('ckan.spatial.use_postgis', 'true')
     add_option('ckanext.spatial.search_backend', 'solr-bbox')
 
     # Now initialize the postgis database
-    # TODO: vsam-: maybe 4326 (the srid) should be provided by environment!!
     srid = '4326'
     ckan_exec(['ckan', f'--config={ckan_ini}', 'spatial', 'initdb', srid])
 
@@ -114,23 +115,18 @@ def setup_spatial():
     if os.environ.get('CKAN__SPATIAL_REBUILD_INDEX', None):
         ckan_exec(['ckan', f'--config={ckan_ini}', 'search-index', 'rebuild'])
 
-    map_type = os.environ.get('CKANEXT__SPATIAL__COMMON_MAP__TYPE', None)
-    match map_type:
-        case 'mapbox':
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__TYPE')
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__MAPBOX__MAP_ID', 'mapbox.satellite')
-            add_option_from_env('CKANEXT__SPATIAL__COMMON_MAP__ACCESS_TOKEN', 'DANGER:notgiven')
-
-        case _:
-            pass
+    # Copy the env-based configuration for common_map to ckan.ini
+    SCM_PREFIX = "CKANEXT__SPATIAL__COMMON_MAP__"
+    if SCM_PREFIX+'TYPE' in os.environ:
+        opts = [opt for opt in os.environ if opt.startswith(SCM_PREFIX)]
+        for opt in opts:
+            add_option_from_env(opt, os.environ[opt])
 
 
 @logger.wrap
-def setup_klms_schemata():
+def setup_klms_schema():
     #
-    # Set up the custom SQL schemas for execution metadata
-    # This is currently done here, but it is possible that we will
-    # eventually move this to another container.
+    # Set up the custom SQL schemas, functions, and views for execution metadata
     #
 
     psql = '/usr/bin/psql'                                  # psql executable
@@ -140,16 +136,18 @@ def setup_klms_schemata():
         '/srv/app/etc/custom_functions.sql',                # functions file
         '/srv/app/etc/custom_views.sql'                     # views file
     ]
+    
+    logger.info("Initializing STELAR KLMS Database schema, functions and views.")
 
     # Check for psql executability and URL availability
     if not os.access(psql, os.X_OK):
-        logger.error(f"{psql} cannot be executed, skipping custom schemata init")
+        logger.error(f"{psql} cannot be executed, skipping custom schema init")
         return
     if URL is None:
-        logger.error("CKAN_SQLALCHEMY_URL is not set, skipping custom schemata init")
+        logger.error("CKAN_SQLALCHEMY_URL is not set, skipping custom schema init")
         return
-    
-    # Loop through each SQL file and execute it
+
+    # Loop through each SQL file and execute it in the database context
     for sql_file in sql_files:
         if not os.access(sql_file, os.R_OK):
             logger.error(f"{sql_file} does not exist or is not readable, skipping this file")
@@ -161,15 +159,30 @@ def setup_klms_schemata():
         if rcode == 0:
             logger.info(f"{sql_file} executed successfully")
         else:
-            logger.error(f"Execution failed for {sql_file} (rcode={rcode})")
+            logger.fatal(f"Execution failed for {sql_file} (rcode={rcode})")
             break  # Stop further execution if any file fails
+
+
+@logger.wrap
+def setup_keycloak_clients():
+    logger.info("Initializing Keycloak Clients")
+    pass
+
+@logger.wrap
+def apply_keycloak_settings():
+    logger.info("Applying Required Keycloak Settings")
+    pass
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level='INFO')
-    logging.info(f"Configuring {ckan_ini} STELAR custom schemata, functions and views inside PostgreSQL & configuring extensions.")
+    logging.info(f"Configuring {ckan_ini} for STELAR extensions.")
     logger.logger = logging.getLogger("stelar")
 
-    setup_keycloak()
-    setup_spatial()
-    setup_klms_schemata()
-
+    setup_root_path()
+    setup_keycloak_ext()
+    setup_spatial_ext()
+    setup_klms_schema()
+    setup_keycloak_clients()
+    apply_keycloak_settings()
