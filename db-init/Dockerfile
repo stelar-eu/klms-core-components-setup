@@ -11,6 +11,10 @@ RUN mkdir -p /srv/app/etc
 RUN mkdir -p /srv/app/etc/supervisord.d
 COPY setup/supervisord.conf /srv/app/etc
 
+# Copy requirements and install python libs using pip 
+COPY ./requirements.txt /srv/app
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy custom SQL files in the <app>/etc directory. Used to init schemas for STELAR KLMS, OnTop etc.
 COPY schema-extensions/30_custom_schemata.sql /srv/app/etc/custom_schemata.sql
 COPY schema-extensions/40_custom_functions.sql /srv/app/etc/custom_functions.sql
@@ -21,6 +25,9 @@ COPY docker-entrypoint.d/* /docker-entrypoint.d/
 
 # Use the custom start_ckan.sh script
 COPY setup/start_ckan.sh.stelar-init /srv/app/start_ckan.sh
+
+# Use the custom prerun.py
+COPY setup/prerun.py /srv/app/prerun.py
 
 # Apply any patches needed to CKAN core or any of the built extensions (not the
 # runtime mounted ones)
