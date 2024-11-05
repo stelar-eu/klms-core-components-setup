@@ -1,10 +1,10 @@
 from keycloak import KeycloakAdmin,KeycloakPostError
-from kubernetes import client, config #need to pip install 
+from kubernetes import client, config #need to pip install
 import base64
 import yaml
 import os
 
-config.load_kube_config()
+config.load_incluster_config()
 
 # Keycloak admin credentials
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN")
@@ -35,7 +35,6 @@ CKAN_CLIENT_HOME_URL = os.getenv("KC_CKAN_CLIENT_HOME_URL")
 API_CLIENT_ROOT_URL = os.getenv("KC_API_CLIENT_ROOT_URL",API_CLIENT_HOME_URL)
 MINIO_CLIENT_ROOT_URL = os.getenv("KC_MINIO_CLIENT_ROOT_URL",MINIO_CLIENT_HOME_URL)
 CKAN_CLIENT_ROOT_URL = os.getenv("KC_CKAN_CLIENT_ROOT_URL",CKAN_CLIENT_HOME_URL)
-
 
 
 # Function to initialize Keycloak Admin client
