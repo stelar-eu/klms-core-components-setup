@@ -1,6 +1,6 @@
 
 DOCKER=docker
-IMGTAG=vsam/stelar-okeanos:ckan
+IMGTAG=petroud/stelar-tuc:ckan
 
 .PHONY: all build push
 
