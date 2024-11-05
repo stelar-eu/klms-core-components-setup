@@ -1,0 +1,14 @@
+FROM python:3.11
+
+WORKDIR /app
+# First copy the requirements, which will not change too often
+COPY ./requirements.txt /app
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Now copy everything else
+COPY . /app/
+
+# This will change after refactoring
+ENV PYTHONPATH=/app/src
+
+CMD ["python3", "run.py"]
