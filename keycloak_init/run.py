@@ -64,6 +64,33 @@ def create_client(keycloak_admin, client_name, home_url, root_url):
     print(f'Client "{client_name}" created successfully with ID: {client_id}')
     return client_id
 
+def enable_service_account(keycloak_admin, client_id):
+    try:
+        # Retrieve the client configuration
+        client_representation = keycloak_admin.get_client(client_id)
+        
+        # Update the configuration to enable service accounts
+        client_representation["serviceAccountsEnabled"] = True
+        client_representation["authorizationServicesEnabled"] = True
+        
+        # Update the client with the modified configuration
+        keycloak_admin.update_client(client_id, client_representation)
+        print(f"Service account enabled for client with ID: {client_id}")
+
+        role = keycloak_admin.get_realm_role("admin")
+        print(f"Retrieved existing role: {"admin"}")
+
+        service_account_user = keycloak_admin.get_client_service_account_user(client_id)
+        service_account_user_id = service_account_user["id"]
+
+        # Assign the admin role to the service account user
+        keycloak_admin.assign_realm_roles(service_account_user_id, [role])
+        print(f"Admin role assigned to service account for client ID: {client_id}")
+        
+    except KeycloakPostError as e:
+        print(f"Failed to enable service account: {e}")
+        raise
+
 ################### Secret Creation ############################
 
 def create_k8s_secret(secret_name, namespace, data_dict):
@@ -122,6 +149,9 @@ def main():
         print(client)
 
         client_id = create_client(keycloak_admin,client["name"],client["home_url"],client["root_url"])
+
+        if client["name"] == API_CLIENT:
+            enable_service_account(keycloak_admin, client_id)
 
         client_secret_info = keycloak_admin.get_client_secrets(client_id)
         client_secret = client_secret_info['value']
