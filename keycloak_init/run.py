@@ -9,8 +9,6 @@ config.load_incluster_config()
 # Keycloak admin credentials
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN")
 KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
-# KEYCLOAK_ADMIN_USERNAME = 'admin'
-# KEYCLOAK_ADMIN_PASSWORD = 'stelartuc'
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")
 KEYCLOAK_URL = 'http://keycloak:'+ os.getenv("KEYCLOAK_PORT")
 
@@ -18,7 +16,6 @@ KEYCLOAK_URL = 'http://keycloak:'+ os.getenv("KEYCLOAK_PORT")
 API_CLIENT = os.getenv("KC_API_CLIENT_NAME")
 MINIO_CLIENT = os.getenv("KC_MINIO_CLIENT_NAME")
 CKAN_CLIENT = os.getenv("KC_CKAN_CLIENT_NAME") #????????????
-# KEYCLOAK_URL = 'https://kc.stelar.gr/'
 
 #CLIENTS REDIRECT
 API_CLIENT_REDIRECT = os.getenv("KC_API_CLIENT_REDIRECT")
@@ -138,7 +135,6 @@ def apply_secret_to_cluster(secret):
 
 
 def main():
-    # print("Hello there")
 
     keycloak_admin = initialize_keycloak_admin()
 
