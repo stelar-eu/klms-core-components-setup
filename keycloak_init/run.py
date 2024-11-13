@@ -14,6 +14,8 @@ KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")
 KEYCLOAK_URL = 'http://keycloak:'+ os.getenv("KEYCLOAK_PORT")
 
+KUBE_NAMESPACE = os.getenv("KUBE_NAMESPACE")
+
 #CLIENT_NAMES
 API_CLIENT = os.getenv("KC_API_CLIENT_NAME")
 MINIO_CLIENT = os.getenv("KC_MINIO_CLIENT_NAME")
@@ -129,7 +131,7 @@ def main():
         print(client["name"]+" Secret:", client_secret)
 
         secret_name = client["name"]+"-client-secret"
-        secret = create_k8s_secret(secret_name,'default',{"secret":client_secret})
+        secret = create_k8s_secret(secret_name, KUBE_NAMESPACE, {"secret":client_secret})
         apply_secret_to_cluster(secret)
 
 
