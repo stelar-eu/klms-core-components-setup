@@ -9,8 +9,6 @@ config.load_incluster_config()
 # Keycloak admin credentials
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN")
 KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
-# KEYCLOAK_ADMIN_USERNAME = 'admin'
-# KEYCLOAK_ADMIN_PASSWORD = 'stelartuc'
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")
 KEYCLOAK_URL = 'http://keycloak:'+ os.getenv("KEYCLOAK_PORT")
 
@@ -20,7 +18,6 @@ KUBE_NAMESPACE = os.getenv("KUBE_NAMESPACE")
 API_CLIENT = os.getenv("KC_API_CLIENT_NAME")
 MINIO_CLIENT = os.getenv("KC_MINIO_CLIENT_NAME")
 CKAN_CLIENT = os.getenv("KC_CKAN_CLIENT_NAME") #????????????
-# KEYCLOAK_URL = 'https://kc.stelar.gr/'
 
 #CLIENTS REDIRECT
 API_CLIENT_REDIRECT = os.getenv("KC_API_CLIENT_REDIRECT")
@@ -65,6 +62,45 @@ def create_client(keycloak_admin, client_name, home_url, root_url):
     client_id = keycloak_admin.create_client(client_representation,skip_exists=True)
     print(f'Client "{client_name}" created successfully with ID: {client_id}')
     return client_id
+
+def enable_service_account(keycloak_admin, client_id):
+    try:
+        # Retrieve the client configuration
+        client_representation = keycloak_admin.get_client(client_id)
+        
+        # Update the configuration to enable service accounts
+        client_representation["serviceAccountsEnabled"] = True
+        client_representation["authorizationServicesEnabled"] = True
+        
+        # Update the client with the modified configuration
+        keycloak_admin.update_client(client_id, client_representation)
+        print(f"Service account enabled for client with ID: {client_id}")
+
+        role = keycloak_admin.get_realm_role("admin")
+        print(f"Retrieved existing role: {"admin"}")
+
+        service_account_user = keycloak_admin.get_client_service_account_user(client_id)
+        service_account_user_id = service_account_user["id"]
+
+        # Assign the admin role to the service account user
+        keycloak_admin.assign_realm_roles(service_account_user_id, [role])
+        print(f"Admin role assigned to service account for client ID: {client_id}")
+        
+    except KeycloakPostError as e:
+        print(f"Failed to enable service account: {e}")
+        raise
+
+def minio_openID_config(keycloak_admin,client_id):
+    alias_command = 'mc alias set myminio '+ os.getenv("MINIO_API_DOMAIN") + ' ' + os.getenv("MINIO_ROOT_USER") + ' ' + os.getenv("MINIO_ROOT_PASSWORD")
+    os.system(alias_command)
+    client_secret = keycloak_admin.get_client_secrets(client_id)
+    client_secr_value = client_secret.get('value')
+    print(client_secr_value)
+    command = 'mc idp openid add myminio stelar-sso client_id='+ MINIO_CLIENT+' client_secret=' + client_secr_value + ' config_url=' +os.getenv("KEYCLOAK_DOMAIN_NAME")+'/realms/master/.well-known/openid-configuration claim_name=policy display_name=STELAR SSO scopes=openid redirect_uri='+os.getenv("KC_MINIO_CLIENT_REDIRECT")
+    print(command)
+    os.system(command)
+
+    os.system('mc admin service restart myminio')
 
 ################### Secret Creation ############################
 
@@ -113,7 +149,6 @@ def apply_secret_to_cluster(secret):
 
 
 def main():
-    # print("Hello there")
 
     keycloak_admin = initialize_keycloak_admin()
 
@@ -125,6 +160,9 @@ def main():
 
         client_id = create_client(keycloak_admin,client["name"],client["home_url"],client["root_url"])
 
+        if client["name"] == API_CLIENT:
+            enable_service_account(keycloak_admin, client_id)
+
         client_secret_info = keycloak_admin.get_client_secrets(client_id)
         client_secret = client_secret_info['value']
 
@@ -133,6 +171,9 @@ def main():
         secret_name = client["name"]+"-client-secret"
         secret = create_k8s_secret(secret_name, KUBE_NAMESPACE, {"secret":client_secret})
         apply_secret_to_cluster(secret)
+    
+    minio_client_id = keycloak_admin.get_client_id(MINIO_CLIENT)
+    minio_openID_config(keycloak_admin,minio_client_id)
 
 
 
