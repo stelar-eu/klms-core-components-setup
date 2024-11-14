@@ -89,18 +89,44 @@ def enable_service_account(keycloak_admin, client_id):
     except KeycloakPostError as e:
         print(f"Failed to enable service account: {e}")
         raise
+import os
+import subprocess
 
-def minio_openID_config(keycloak_admin,client_id):
-    alias_command = 'mc alias set myminio '+ os.getenv("MINIO_API_DOMAIN") + ' ' + os.getenv("MINIO_ROOT_USER") + ' ' + os.getenv("MINIO_ROOT_PASSWORD")
-    os.system(alias_command)
+def minio_openID_config(keycloak_admin, client_id):
+    alias_command = (
+        'mc alias set myminio ' +
+        os.getenv("MINIO_API_DOMAIN") + ' ' +
+        os.getenv("MINIO_ROOT_USER") + ' ' +
+        os.getenv("MINIO_ROOT_PASSWORD")
+    )
+    subprocess.run(alias_command, shell=True, check=True)
+
     client_secret = keycloak_admin.get_client_secrets(client_id)
     client_secr_value = client_secret.get('value')
-    print(client_secr_value)
-    command = 'mc idp openid add myminio stelar-sso client_id='+ MINIO_CLIENT+' client_secret=' + client_secr_value + ' config_url=' +os.getenv("KEYCLOAK_DOMAIN_NAME")+'/realms/master/.well-known/openid-configuration claim_name=policy display_name=STELAR SSO scopes=openid redirect_uri='+os.getenv("KC_MINIO_CLIENT_REDIRECT")
-    print(command)
-    os.system(command)
 
-    os.system('mc admin service restart myminio')
+    command = (
+        'mc idp openid add myminio stelar-sso '
+        'client_id=' + MINIO_CLIENT +
+        ' client_secret=' + client_secr_value +
+        ' config_url=' + os.getenv("KEYCLOAK_DOMAIN_NAME") + '/realms/master/.well-known/openid-configuration '
+        'claim_name=policy display_name="STELAR SSO" scopes=openid '
+        'redirect_uri=' + os.getenv("KC_MINIO_CLIENT_REDIRECT")
+    )
+
+    print("Executing IDP setup command...")
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+    print("Output:", result.stdout)
+    if result.stderr:
+        print("Error:", result.stderr)
+
+    # Restart MinIO service and capture output
+    print("Attempting to restart MinIO service...")
+    restart_result = subprocess.run('script -q -c "mc admin service restart myminio"', shell=True, check=True)
+
+    print("Restart Command Output:", restart_result.stdout)
+    if restart_result.stderr:
+        print("Restart Command Error:", restart_result.stderr)
 
 ################### Secret Creation ############################
 
