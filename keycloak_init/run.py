@@ -77,7 +77,7 @@ def enable_service_account(keycloak_admin, client_id):
         print(f"Service account enabled for client with ID: {client_id}")
 
         role = keycloak_admin.get_realm_role("admin")
-        print(f"Retrieved existing role: {"admin"}")
+        print(f"Retrieved existing role: {role}")
 
         service_account_user = keycloak_admin.get_client_service_account_user(client_id)
         service_account_user_id = service_account_user["id"]
