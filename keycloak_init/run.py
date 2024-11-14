@@ -88,6 +88,18 @@ def enable_service_account(keycloak_admin, client_id):
         print(f"Failed to enable service account: {e}")
         raise
 
+def minio_openID_config(keycloak_admin,client_id):
+    alias_command = 'mc alias set myminio '+ os.getenv("MINIO_API_DOMAIN") + ' ' + os.getenv("MINIO_ROOT_USER") + ' ' + os.getenv("MINIO_ROOT_PASSWORD")
+    os.system(alias_command)
+    client_secret = keycloak_admin.get_client_secrets(client_id)
+    client_secr_value = client_secret.get('value')
+    print(client_secr_value)
+    command = 'mc idp openid add myminio stelar-sso client_id='+ MINIO_CLIENT+' client_secret=' + client_secr_value + ' config_url=' +os.getenv("KEYCLOAK_DOMAIN_NAME")+'/realms/master/.well-known/openid-configuration claim_name=policy display_name=STELAR SSO scopes=openid redirect_uri='+os.getenv("KC_MINIO_CLIENT_REDIRECT")
+    print(command)
+    os.system(command)
+
+    os.system('mc admin service restart myminio')
+
 ################### Secret Creation ############################
 
 def create_k8s_secret(secret_name, namespace, data_dict):
@@ -157,6 +169,9 @@ def main():
         secret_name = client["name"]+"-client-secret"
         secret = create_k8s_secret(secret_name,'default',{"secret":client_secret})
         apply_secret_to_cluster(secret)
+    
+    minio_client_id = keycloak_admin.get_client_id(MINIO_CLIENT)
+    minio_openID_config(keycloak_admin,minio_client_id)
 
 
 
