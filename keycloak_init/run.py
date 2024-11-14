@@ -3,6 +3,7 @@ from kubernetes import client, config #need to pip install
 import base64
 import yaml
 import os
+import subprocess
 
 config.load_incluster_config()
 
@@ -35,6 +36,7 @@ API_CLIENT_ROOT_URL = os.getenv("KC_API_CLIENT_ROOT_URL",API_CLIENT_HOME_URL)
 MINIO_CLIENT_ROOT_URL = os.getenv("KC_MINIO_CLIENT_ROOT_URL",MINIO_CLIENT_HOME_URL)
 CKAN_CLIENT_ROOT_URL = os.getenv("KC_CKAN_CLIENT_ROOT_URL",CKAN_CLIENT_HOME_URL)
 
+################### Keycloak Section ############################
 
 # Function to initialize Keycloak Admin client
 def initialize_keycloak_admin():
@@ -63,6 +65,40 @@ def create_client(keycloak_admin, client_name, home_url, root_url):
     print(f'Client "{client_name}" created successfully with ID: {client_id}')
     return client_id
 
+#Function creating a keycloak client scope
+def create_client_scope(keycloak_admin,client_id):
+    protocol_mapper = {
+            "name": "client_role_mapper",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-client-role-mapper",
+            "consentRequired": False,
+            "config": {
+                "claim.name": "policy",
+                "jsonType.label": "String",
+                "id.token.claim": "true",
+                "access.token.claim": "true",
+                "multivalued": "true"
+            }
+        }
+    
+    scope = {
+        "name": "minio_auth_scope",
+        "protocol": "openid-connect",
+    }
+
+    client_scope_id = keycloak_admin.create_client_scope(scope,skip_exists=True)
+    keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
+
+    keycloak_admin.add_client_default_client_scope(client_id,client_scope_id,{"realm":"master","client":"minio","clientScopeId":"minio_auth_scope"})
+
+#Function to create a keycloak client role
+def create_client_role(keycloak_admin, client_name, client_id, role_name):
+    print(client_id)
+    keycloak_admin.create_client_role(client_id, {'name': role_name},skip_exists=True)
+    print(f'Role "{role_name}" created successfully for client "{client_name}".')
+    return role_name
+
+#Enables service account to a client in keycloak
 def enable_service_account(keycloak_admin, client_id):
     try:
         # Retrieve the client configuration
@@ -89,9 +125,8 @@ def enable_service_account(keycloak_admin, client_id):
     except KeycloakPostError as e:
         print(f"Failed to enable service account: {e}")
         raise
-import os
-import subprocess
 
+#creates an open id configuration between keycloak and minIO
 def minio_openID_config(keycloak_admin, client_id):
     alias_command = (
         'mc alias set myminio ' +
@@ -185,9 +220,23 @@ def main():
         print(client)
 
         client_id = create_client(keycloak_admin,client["name"],client["home_url"],client["root_url"])
-
+        
+        #keycloak API client initializations
         if client["name"] == API_CLIENT:
             enable_service_account(keycloak_admin, client_id)
+
+        #keycloak MinIO client initializations
+        if client["name"] == MINIO_CLIENT:
+            enable_service_account(keycloak_admin, client_id)
+
+            try:
+                create_client_scope(keycloak_admin,client_id)
+            except KeycloakPostError as err:
+                print("This client scope already Exists")
+            
+            create_client_role(keycloak_admin,MINIO_CLIENT,client_id,"consoleAdmin")
+            keycloak_admin.assign_client_role(keycloak_admin.get_user_id('admin'),client_id,keycloak_admin.get_client_role(client_id,'consoleAdmin'))
+
 
         client_secret_info = keycloak_admin.get_client_secrets(client_id)
         client_secret = client_secret_info['value']
