@@ -247,7 +247,20 @@ def main():
         secret = create_k8s_secret(secret_name, KUBE_NAMESPACE, {"secret":client_secret})
         apply_secret_to_cluster(secret)
     
+
     minio_client_id = keycloak_admin.get_client_id(MINIO_CLIENT)
+    client_role = keycloak_admin.get_client_role(minio_client_id,"consoleAdmin")
+    print(f"Retrieved existing role: {client_role}")
+
+    api_client_id = keycloak_admin.get_client_id(API_CLIENT)
+    service_account_user = keycloak_admin.get_client_service_account_user(api_client_id)
+    service_account_user_id = service_account_user["id"]
+
+    # Assign the admin role to the service account user
+    keycloak_admin.assign_client_role(service_account_user_id, api_client_id, [client_role])
+    print(f"ConsoleAdmin role assigned to service account for client ID: {api_client_id}")
+    
+    # minio_client_id = keycloak_admin.get_client_id(MINIO_CLIENT)
     minio_openID_config(keycloak_admin,minio_client_id)
 
 
