@@ -89,8 +89,8 @@ def create_client_scope(keycloak_admin,client_id):
     client_scope_id = keycloak_admin.create_client_scope(scope,skip_exists=True)
     keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
 
-    keycloak_admin.add_client_default_client_scope(client_id,client_scope_id,{"realm":"master","client":"minio","clientScopeId":"minio_auth_scope"})
-
+    keycloak_admin.add_client_default_client_scope(client_id,client_scope_id,{"realm":"master","client":MINIO_CLIENT,"clientScopeId":"minio_auth_scope"})
+    
 #Function to create a keycloak client role
 def create_client_role(keycloak_admin, client_name, client_id, role_name):
     print(client_id)
@@ -231,9 +231,17 @@ def main():
 
             try:
                 create_client_scope(keycloak_admin,client_id)
+
             except KeycloakPostError as err:
                 print("This client scope already Exists")
-            
+
+            try:
+                scopeData = keycloak_admin.get_client_scope_by_name("minio_auth_scope")
+                api_client_id = keycloak_admin.get_client_id(API_CLIENT)
+                keycloak_admin.add_client_default_client_scope(api_client_id,scopeData['id'],{"realm":"master","client":API_CLIENT,"clientScopeId":"minio_auth_scope"})
+            except:
+                print("Scope already assigned")
+
             create_client_role(keycloak_admin,MINIO_CLIENT,client_id,"consoleAdmin")
             keycloak_admin.assign_client_role(keycloak_admin.get_user_id('admin'),client_id,keycloak_admin.get_client_role(client_id,'consoleAdmin'))
 
