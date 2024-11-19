@@ -213,8 +213,8 @@ def main():
 
     keycloak_admin = initialize_keycloak_admin()
 
-    clients_name_list = [{"name":MINIO_CLIENT,"home_url":MINIO_CLIENT_HOME_URL,"root_url":MINIO_CLIENT_ROOT_URL},
-                         {"name":API_CLIENT,"home_url":API_CLIENT_HOME_URL,"root_url":API_CLIENT_ROOT_URL},
+    clients_name_list = [{"name":API_CLIENT,"home_url":API_CLIENT_HOME_URL,"root_url":API_CLIENT_ROOT_URL},
+                         {"name":MINIO_CLIENT,"home_url":MINIO_CLIENT_HOME_URL,"root_url":MINIO_CLIENT_ROOT_URL},
                          {"name":CKAN_CLIENT,"home_url":CKAN_CLIENT_HOME_URL,"root_url":CKAN_CLIENT_ROOT_URL}]
     for client in clients_name_list:
         print(client)
