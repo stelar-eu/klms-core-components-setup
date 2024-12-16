@@ -128,12 +128,18 @@ def enable_service_account(keycloak_admin, client_id):
 
 #creates an open id configuration between keycloak and minIO
 def minio_openID_config(keycloak_admin, client_id):
+    # Base command for setting the alias
     alias_command = (
         'mc alias set myminio ' +
         os.getenv("MINIO_API_DOMAIN") + ' ' +
         os.getenv("MINIO_ROOT_USER") + ' ' +
         os.getenv("MINIO_ROOT_PASSWORD")
     )
+    
+    # Check if MINIO_INSECURE_MC is set to True and append --insecure. Used for minikube deployment
+    if os.getenv("MINIO_INSECURE_MC", "False").lower() == "true":
+        alias_command += " --insecure"
+
     subprocess.run(alias_command, shell=True, check=True)
 
     client_secret = keycloak_admin.get_client_secrets(client_id)
