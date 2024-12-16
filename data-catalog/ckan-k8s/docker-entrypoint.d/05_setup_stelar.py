@@ -3,8 +3,12 @@ import subprocess
 import logging
 from kubernetes import config, client
 import yaml 
+import base64
 
 config.load_incluster_config()
+
+KUBE_NAMESPACE = os.getenv("KUBE_NAMESPACE",'default')
+
 
 # A convenient wrapper for logging
 class StackLogger(logging.LoggerAdapter):
@@ -35,7 +39,6 @@ logger = StackLogger(None)
 
 # Global variable, used for convenience
 ckan_ini = os.environ.get("CKAN_INI", "/srv/app/ckan.ini")
-
 
 #
 # Some utilities
@@ -105,6 +108,24 @@ def setup_keycloak():
 
 
 @logger.wrap
+def issue_api_token():
+
+    try:
+        command = (
+            "ckan user token add ckan_admin api_token | grep -A 1 \"API Token created:\" | tail -n 1 | tr -d '\t '"
+        )
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        output = result.stdout.strip()
+
+        # If the token is correctly generated, then create a secret in the cluster containing it. 
+        token_secret = create_k8s_secret("ckan-admin-token-secret", {'token':output})
+        apply_secret_to_cluster(token_secret)    
+
+    except subprocess.CalledProcessError as e:
+        print("Error Output:", e.stderr)
+
+
+@logger.wrap
 def setup_spatial():
     log = logging.getLogger('setup_spatial')
 
@@ -130,10 +151,9 @@ def setup_spatial():
 
 @logger.wrap
 def create_ckanini_configmap():
-    nspace = os.getenv("KUBE_NAMESPACE", None)
     ckan_ini_path = ckan_ini
 
-    if nspace:
+    if KUBE_NAMESPACE:
         # Read the content of the CKAN INI file
         try:
             with open(ckan_ini_path, 'r') as f:
@@ -144,7 +164,7 @@ def create_ckanini_configmap():
             raise Exception(f"[FATAL] Error reading CKAN INI file: {str(e)}")
 
         # Generate the ConfigMap with the content of the CKAN INI file
-        cmap = generate_k8s_configmap('ckan-config', nspace, {'ckan.ini': ckan_ini_content})
+        cmap = generate_k8s_configmap('ckan-config', KUBE_NAMESPACE, {'ckan.ini': ckan_ini_content})
 
         try:
             apply_configmap_to_k8s_cluster(cmap)            
@@ -154,6 +174,10 @@ def create_ckanini_configmap():
     else:
         raise Exception("[FATAL] NAMESPACE NOT DEFINED IN ENV VARS.")
     
+
+#### COMMAND TO GREP TOKEN TO PASS IT TO API POD
+#ckan user token add ckan_admin api_token | grep -A 1 "API Token created:" | tail -n 1 | tr -d '\t '
+
 
 @logger.wrap
 def generate_k8s_configmap(configmap_name, namespace, data_dict):
@@ -183,6 +207,44 @@ def generate_k8s_configmap(configmap_name, namespace, data_dict):
     # print("Generated Kubernetes ConfigMap YAML:")
     # print(yaml.dump(configmap))
     return configmap
+
+@logger.wrap
+def create_k8s_secret(secret_name, data_dict):
+    # Encode data to base64 as required by Kubernetes secrets
+    encoded_data = {k: base64.b64encode(v.encode("utf-8")).decode("utf-8") for k, v in data_dict.items()}
+
+    # Define the secret structure
+    secret = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {
+            "name": secret_name,
+            "namespace": KUBE_NAMESPACE,
+        },
+        "type": "Opaque",
+        "data": encoded_data,
+    }
+
+    logger.info("Generated Kubernetes Secret YAML for CKAN Admin Token")
+    
+    return secret
+
+@logger.wrap
+def apply_secret_to_cluster(secret):
+    v1 = client.CoreV1Api()
+
+    # Create the secret in the specified namespace
+    try:
+        v1.create_namespaced_secret(
+            namespace=KUBE_NAMESPACE,
+            body=secret
+        )
+        logger.info(f"Secret created in namespace ''.")
+    except client.exceptions.ApiException as e:
+        if e.status == 409:
+            logger.error(f"Secret 'CKAN_ADMIN_TOKEN' already exists.")
+        else:
+            logger.error(f"Failed to create secret: {e}")
 
 @logger.wrap
 def apply_configmap_to_k8s_cluster(configmap):
@@ -220,4 +282,4 @@ if __name__ == '__main__':
     setup_keycloak()
     setup_spatial()
     create_ckanini_configmap()
-
+    issue_api_token()
