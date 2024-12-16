@@ -44,7 +44,8 @@ def initialize_keycloak_admin():
                          username=KEYCLOAK_ADMIN_USERNAME,
                          password=KEYCLOAK_ADMIN_PASSWORD,
                          realm_name=KEYCLOAK_REALM,
-                         verify=True)
+                         verify=False)
+
 
 # Function to create a client
 def create_client(keycloak_admin, client_name, home_url, root_url):
@@ -149,7 +150,7 @@ def minio_openID_config(keycloak_admin, client_id):
         'mc idp openid add myminio stelar-sso '
         'client_id=' + MINIO_CLIENT +
         ' client_secret=' + client_secr_value +
-        ' config_url=' + os.getenv("KEYCLOAK_DOMAIN_NAME") + '/realms/master/.well-known/openid-configuration '
+        ' config_url='+KEYCLOAK_URL+'/realms/master/.well-known/openid-configuration '
         'claim_name=policy display_name="STELAR SSO" scopes=openid '
         'redirect_uri=' + os.getenv("KC_MINIO_CLIENT_REDIRECT")
     )
