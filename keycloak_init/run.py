@@ -46,7 +46,6 @@ def initialize_keycloak_admin():
                          realm_name=KEYCLOAK_REALM,
                          verify=False)
 
-
 # Function to create a client
 def create_client(keycloak_admin, client_name, home_url, root_url):
     client_representation = {
