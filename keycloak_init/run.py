@@ -154,6 +154,11 @@ def minio_openID_config(keycloak_admin, client_id):
         'redirect_uri=' + os.getenv("KC_MINIO_CLIENT_REDIRECT")
     )
 
+     # Check if MINIO_INSECURE_MC is set to True and append --insecure. Used for minikube deployment
+    if os.getenv("MINIO_INSECURE_MC", "False").lower() == "true":
+        print("Entering insecure mode...")
+        command += " --insecure"
+
     print("Executing IDP setup command...")
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
@@ -163,7 +168,13 @@ def minio_openID_config(keycloak_admin, client_id):
 
     # Restart MinIO service and capture output
     print("Attempting to restart MinIO service...")
-    restart_result = subprocess.run('script -q -c "mc admin service restart myminio"', shell=True, check=True)
+    restart_command = 'mc admin service restart myminio'
+    # Check if MINIO_INSECURE_MC is set to True and append --insecure
+    if os.getenv("MINIO_INSECURE_MC", "False").lower() == "true":
+        print("Entering insecure mode...")
+        restart_command += " --insecure"
+
+    restart_result = subprocess.run(f'script -q -c "{restart_command}"', shell=True, check=True)
 
     print("Restart Command Output:", restart_result.stdout)
     if restart_result.stderr:
