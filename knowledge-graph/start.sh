@@ -34,6 +34,6 @@ elif [ "$1" = 'setup-db' ]; then
         fi
     done
 else
-    echo "Invalid command. Use 'start-server' or 'setup-db'."
+    echo "Invalid command. Use 'start-ontop' or 'setup-db'."
     exit 1
 fi
