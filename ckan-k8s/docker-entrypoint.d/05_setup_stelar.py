@@ -106,6 +106,16 @@ def setup_keycloak():
     add_option_from_env("CKANEXT__KEYCLOAK__BUTTON_STYLE")
     add_option_from_env("CKANEXT__KEYCLOAK__ENABLE_CKAN_INTERNAL_LOGIN")
 
+@logger.wrap
+def setup_scheming():
+    log = logging.getLogger('setup_scheming')
+
+    add_option("scheming.dataset_schemas","ckanext.scheming:tools.yaml")
+    add_option("scheming.group_schemas","ckanext.scheming:group_with_bookface.json")
+    add_option("scheming.organization_schemas","ckanext.scheming:org_with_dept_id.json")
+    add_option("scheming.presets","ckanext.scheming:presets.json")
+    add_option("scheming.dataset_fallback","false")
+
 
 @logger.wrap
 def issue_api_token():
@@ -281,5 +291,6 @@ if __name__ == '__main__':
     setup_root_path()
     setup_keycloak()
     setup_spatial()
+    setup_scheming()
     create_ckanini_configmap()
     issue_api_token()
