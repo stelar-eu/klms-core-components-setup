@@ -15,8 +15,8 @@ USER 0
 WORKDIR /
 RUN apt -y update
 RUN apt -y install git
-RUN git clone https://github.com/stelar-eu/klms-ontology
 RUN git clone https://github.com/stelar-eu/klms-core-components-setup
+RUN git clone https://github.com/stelar-eu/klms-ontology
 RUN  wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
 
 
