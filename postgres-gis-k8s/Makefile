@@ -1,6 +1,6 @@
 
 DOCKER=docker
-IMGTAG=vsam/stelar-okeanos:postgis
+IMGTAG=petroud/stelar-tuc:postgres
 
 .PHONY: all build push
 

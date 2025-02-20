@@ -18,6 +18,17 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
     CREATE DATABASE "$DATASTORE_DB" OWNER "$CKAN_DB_USER" ENCODING 'utf-8';
 EOSQL
 
+#Create 'quay' database and quay user
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+    CREATE ROLE "$QUAY_DB_USER" NOSUPERUSER CREATEDB CREATEROLE LOGIN PASSWORD '$QUAY_DB_PASSWORD';
+    CREATE DATABASE "$QUAY_DB" OWNER "$QUAY_DB_USER" ENCODING 'utf-8';
+EOSQL
+
+#Enable pg_trgm extension required by quay.
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" "$QUAY_DB" <<-EOSQL
+    CREATE EXTENSION pg_trgm;
+EOSQL
+
 # Connect to the newly created database and enable the PostGIS extension
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" "$DATASTORE_DB" <<-EOSQL
     CREATE EXTENSION postgis;
