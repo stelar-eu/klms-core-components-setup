@@ -102,7 +102,7 @@ def generate_tool_registry_configuration():
         registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1][
             "bucket_name"
         ] = MINIO_BUCKET
-        registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1]["is_secure"] = bool(
+        registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1]["is_secure"] = not bool(
             MINIO_INSECURE
         )
 
