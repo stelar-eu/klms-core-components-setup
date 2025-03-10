@@ -1,6 +1,6 @@
 
 DOCKER=docker
-IMGTAG=petroud/stelar-tuc:postgres
+IMGTAG=petroud/stelar-tuc:registry-init
 
 .PHONY: all build push
 

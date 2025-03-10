@@ -140,10 +140,6 @@ RUN pip install -r requirements-postgis.txt
 RUN python setup.py install
 RUN python setup.py develop
 
-# EXTENSION: scheming
-WORKDIR /srv/app/src
-RUN pip install -e "git+https://github.com/stelar-eu/ckanext-scheming-stelar.git@master#egg=ckanext-scheming-stelar"
-
 #################################################################################
 
 # Restore WORKDIR after extensions are installed
