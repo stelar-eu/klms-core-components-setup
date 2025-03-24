@@ -130,7 +130,15 @@ def setup_spatial():
     log = logging.getLogger('setup_spatial')
 
     add_option('ckan.spatial.use_postgis', 'true')
+    #
+    # There are two backends for spatial search: solr-bbxor and solr-spatial-field
+    # We are currently committed to the first.
+    # The settings of search backend and solr query parsers go hand in hand.
+    #  solr-bbox  <-> frange
+    #  solr-spatial-field <-> field
+    #
     add_option('ckanext.spatial.search_backend', 'solr-bbox')
+    add_option('ckan.search.solr_allowed_query_parsers', 'frange')
 
     # Now initialize the postgis database
     # TODO: vsam-: maybe 4326 (the srid) should be provided by environment!!

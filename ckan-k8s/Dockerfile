@@ -186,5 +186,9 @@ RUN chown ckan:ckan -R /srv/app
 
 EXPOSE 5000
 
+LABEL "org.opencontainers.image.version"="0.3"
+LABEL "org.opencontainers.image.authors"="The AthenaRC team"
+
+
 ### DERIVED FROM CKAN ORIGINAL DOCKERFILE
 ENTRYPOINT ["/srv/app/start_ckan.sh"]
