@@ -5,7 +5,7 @@
 #
 # Helper stage
 #
-FROM ontop/ontop:5.0.0 as  ontop-workspace
+FROM ontop/ontop:5.3.0 as  ontop-workspace
 ARG JDBC_DRIVER=postgresql-42.7.3.jar
 
 #
@@ -20,7 +20,7 @@ RUN git clone https://github.com/stelar-eu/klms-ontology
 RUN  wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
 
 
-FROM ontop/ontop:5.0.0
+FROM ontop/ontop:5.3.0
 
 USER 0
 
@@ -34,6 +34,10 @@ ENV ONTOP_MAPPING_FILE=/opt/ontop/input/klms-mappings.obda
 
 COPY --from=ontop-workspace /klms-core-components-setup/knowledge-graph/input/klms-sparql-portal.toml /opt/ontop/input
 ENV ONTOP_PORTAL_FILE=/opt/ontop/input/klms-sparql-portal.toml
+
+COPY ontop.properties /opt/ontop/input
+
+ENV ONTOP_PROPERTIES_FILE=/opt/ontop/input/ontop.properties
 
 # Install PostgreSQL client for running the db init scripts
 RUN apt-get update && \
