@@ -31,7 +31,7 @@ MINIO_HOST = os.getenv("MINIO_HOST")
 MINIO_SANITIZED_HOST = MINIO_HOST.replace("http://", "").replace("https://", "")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER")
 MINIO_ROOT_PASS = os.getenv("MINIO_ROOT_PASSWORD")
-MINIO_INSECURE = os.getenv("MC_INSECURE")
+MINIO_INSECURE = os.getenv("MC_INSECURE") == "true"
 MINIO_BUCKET = os.getenv("MINIO_REGISTRY_BUCKET")
 
 # Generic Params
@@ -40,7 +40,7 @@ QUAY_REDIS_HOSTNAME = os.getenv("QUAY_REDIS_HOSTNAME")
 QUAY_REDIS_PORT = os.getenv("QUAY_REDIS_PORT")
 
 
-#################### KEYCLOAK #####################
+#----------------- KEYCLOAK -----------------
 def mc_setup():
     subprocess.run(
         [
@@ -58,7 +58,7 @@ def mc_setup():
     )
 
 
-################### Tool Registry Configuration ####################
+#----------------- Tool Registry Configuration -----------------
 def generate_tool_registry_configuration():
     registry_config_yaml = "config.yaml"
     if KUBE_NAMESPACE:
@@ -102,12 +102,12 @@ def generate_tool_registry_configuration():
         registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1][
             "bucket_name"
         ] = MINIO_BUCKET
-        registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1]["is_secure"] = not bool(
-            MINIO_INSECURE
-        )
+        registry_yaml["DISTRIBUTED_STORAGE_CONFIG"]["default"][1]["is_secure"] = not MINIO_INSECURE
+    
 
         # Configure server hostname
         registry_yaml["SERVER_HOSTNAME"] = QUAY_SERVER_HOSTNAME
+        registry_yaml["PREFERRED_URL_SCHEME"] = "http" if MINIO_INSECURE else "https"
 
         # Configure OIDC params
         registry_yaml["OIDC_LOGIN_CONFIG"]["CLIENT_ID"] = KC_QUAY_CLIENT_NAME
@@ -177,7 +177,7 @@ def generate_tool_registry_configuration():
         tkn = token.get("access_token", None)
         if tkn:
             
-            ############################### ORGANIZATION CREATION #################################
+            #----------------- ORGANIZATION CREATION -----------------
             # Create organization STELAR
             org_url = f"http://{QUAY_SERVER_HOSTNAME}/api/v1/organization"
             headers = {
@@ -198,7 +198,7 @@ def generate_tool_registry_configuration():
                 print(f"[FATAL] Request to create organization failed: {str(e)}")
                 return
 
-            ############################### TEAM CREATION #################################
+            #----------------- TEAM CREATION -----------------
             # Create pullers team
             team_url = f"http://{QUAY_SERVER_HOSTNAME}/api/v1/organization/stelar/team/{KC_PULLERS_ROLE_NAME}"
             team_data = {"name": KC_PULLERS_ROLE_NAME, "role": "member"}
@@ -231,7 +231,7 @@ def generate_tool_registry_configuration():
                 print(f"[FATAL] Request to create team failed: {str(e)}")
                 return
             
-            ############################### TEAM SYNCING #################################
+            #----------------- TEAM SYNCING -----------------
 
             # Enable team syncing with OIDC for pushers
             sync_url = f"http://{QUAY_SERVER_HOSTNAME}/api/v1/organization/stelar/team/{KC_PUSHERS_ROLE_NAME}/syncing"
@@ -269,7 +269,7 @@ def generate_tool_registry_configuration():
                 print(f"[FATAL] Request to enable team syncing failed: {str(e)}")
                 return
                       
-            ############################### REPOSITORY DELEGATION #################################
+            #----------------- REPOSITORY DELEGATION -----------------
 
             # Enable org repository default delegation permissions for pushers
             delegation_url = f"http://{QUAY_SERVER_HOSTNAME}/api/v1/organization/stelar/prototypes"
@@ -353,7 +353,7 @@ def get_minio_keys():
     return None
 
 
-################ ConfigMap Generation #################
+#----------------- ConfigMap Generation -----------------
 def apply_configmap_to_k8s_cluster(configmap):
     """
     Applies a Kubernetes ConfigMap to the specified namespace.
@@ -395,7 +395,7 @@ def generate_k8s_configmap(configmap_name, namespace, data_dict):
     return configmap
 
 
-############################## MAIN ################################
+#----------------- MAIN -----------------
 if __name__ == "__main__":
     mc_setup()
     generate_tool_registry_configuration()
