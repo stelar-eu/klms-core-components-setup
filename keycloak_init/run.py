@@ -1,4 +1,4 @@
-from keycloak import KeycloakAdmin, KeycloakPostError
+from keycloak.keycloak_admin import KeycloakAdmin, KeycloakPostError
 from kubernetes import client, config  # need to pip install
 import base64
 import yaml
@@ -55,6 +55,39 @@ def initialize_keycloak_admin():
     )
 
 
+def create_administrative_user_spec(keycloak_admin: KeycloakAdmin):
+    
+    # Define the new user attribute to be added
+    new_attribute = {
+        "name": "is_admin",
+        "displayName": "Is Administrator",
+        "validations": {},
+        "annotations": {},
+        "permissions": {
+            "view": [
+                "admin"
+            ],
+            "edit": [
+                "admin"
+            ]
+        },
+        "multivalued": False
+    }
+
+    # Retrieve the existing realm user profile which holds the attributes list
+    profile = keycloak_admin.get_realm_users_profile()
+    attributes = profile.get("attributes", [])
+
+    # Check if an attribute with the same name already exists in the list
+    if any(attr.get("name") == new_attribute["name"] for attr in attributes):
+        print(f'Attribute "{new_attribute["name"]}" already exists in realm "{KEYCLOAK_REALM}".')
+    else:
+        # Append the new attribute and update the realm configuration
+        attributes.append(new_attribute)
+        keycloak_admin.update_realm_users_profile({"attributes": attributes})
+        print(f'User attribute "{new_attribute["name"]}" created successfully.')
+
+
 def create_realm_role(keycloak_admin, role_name):
     realm_role = {
         "name": role_name,
@@ -92,6 +125,9 @@ def create_client_scope(
     claim_name,
     mapper_name,
     mapper_type="oidc-usermodel-client-role-mapper",
+    attribute_name=None,
+    type="String",
+    multivalued="true",
 ):
     protocol_mapper = {
         "name": mapper_name,
@@ -100,30 +136,36 @@ def create_client_scope(
         "consentRequired": False,
         "config": {
             "claim.name": claim_name,
-            "jsonType.label": "String",
+            "jsonType.label": type,
             "id.token.claim": "true",
             "access.token.claim": "true",
-            "multivalued": "true",
+            "multivalued": multivalued,
         },
     }
+
+    if mapper_type == "oidc-usermodel-attribute-mapper":
+        protocol_mapper["config"]["user.attribute"] = attribute_name
+        protocol_mapper["config"]["userinfo.token.claim"] = "true"
 
     scope = {
         "name": name,
         "protocol": "openid-connect",
     }
+    try:
+        client_scope_id = keycloak_admin.create_client_scope(scope, skip_exists=True)
+        keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
 
-    client_scope_id = keycloak_admin.create_client_scope(scope, skip_exists=True)
-    keycloak_admin.add_mapper_to_client_scope(client_scope_id, protocol_mapper)
-
-    keycloak_admin.add_client_default_client_scope(
-        client_id,
-        client_scope_id,
-        {
-            "realm": "master",
-            "client": MINIO_CLIENT,
-            "clientScopeId": "minio_auth_scope",
-        },
-    )
+        keycloak_admin.add_client_default_client_scope(
+            client_id,
+            client_scope_id,
+            {
+                "realm": "master",
+                "client": MINIO_CLIENT,
+                "clientScopeId": "minio_auth_scope",
+            },
+        )
+    except Exception as e:
+        print(f"Error creating client scope: {e}")
 
 
 # Function to create a keycloak client role
@@ -389,6 +431,26 @@ def main():
         "registry_mapper",
         "oidc-usermodel-realm-role-mapper",
     )
+
+    # Create the administrative user spec
+    create_administrative_user_spec(keycloak_admin)
+    create_client_scope(
+        keycloak_admin,
+        api_client_id,
+        "admin_attr_scope",
+        "is_admin",
+        "admin_attr_mapper",
+        "oidc-usermodel-attribute-mapper",
+        "is_admin",
+        "boolean",
+        "false",
+    )
+
+    # Set the attribute for the admin user
+    admin_id = keycloak_admin.get_user_id("admin")
+    admin_rep = keycloak_admin.get_user(admin_id)
+    admin_rep["attributes"]["is_admin"] = True
+    keycloak_admin.update_user(admin_id, admin_rep)
 
 
 if __name__ == "__main__":
