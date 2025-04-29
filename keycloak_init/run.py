@@ -268,6 +268,17 @@ def minio_openID_config(keycloak_admin, client_id):
         print("Restart Command Error:", restart_result.stderr)
 
 
+def create_bucket(bucket_name: str):
+    # Create the bucket using MinIO client
+    command = f"mc mb myminio/{bucket_name}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        print(f"Bucket '{bucket_name}' created successfully.")
+    else:
+        print(f"Failed to create bucket '{bucket_name}': {result.stderr}")
+
+
 ################### Secret Creation ############################
 
 
@@ -449,8 +460,11 @@ def main():
     # Set the attribute for the admin user
     admin_id = keycloak_admin.get_user_id("admin")
     admin_rep = keycloak_admin.get_user(admin_id)
-    admin_rep["attributes"]["is_admin"] = True
+    admin_rep['attributes'] = {'is_admin': True}  
     keycloak_admin.update_user(admin_id, admin_rep)
+
+    # Create the registry bucket
+    create_bucket("registry")
 
 
 if __name__ == "__main__":
