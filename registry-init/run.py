@@ -114,6 +114,7 @@ def generate_tool_registry_configuration():
         registry_yaml["OIDC_LOGIN_CONFIG"]["CLIENT_SECRET"] = KC_QUAY_CLIENT_SECRET
         registry_yaml["OIDC_LOGIN_CONFIG"]["OIDC_SERVER"] = KC_ISSUER
         registry_yaml["OIDC_LOGIN_CONFIG"]["PREFERRED_GROUP_CLAIM_NAME"] = KC_ROLES_FIELD
+        registry_yaml["OIDC_LOGIN_CONFIG"]["DEBUGGING"] = MINIO_INSECURE
 
         cmap = generate_k8s_configmap(
             "registry-config", KUBE_NAMESPACE, {"config.yaml": yaml.dump(registry_yaml)}
