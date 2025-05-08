@@ -108,6 +108,7 @@ def generate_tool_registry_configuration():
         # Configure server hostname
         registry_yaml["SERVER_HOSTNAME"] = QUAY_SERVER_HOSTNAME
         registry_yaml["PREFERRED_URL_SCHEME"] = "http" if MINIO_INSECURE else "https"
+        registry_yaml["TESTING"] = True if MINIO_INSECURE else False
 
         # Configure OIDC params
         registry_yaml["OIDC_LOGIN_CONFIG"]["CLIENT_ID"] = KC_QUAY_CLIENT_NAME
