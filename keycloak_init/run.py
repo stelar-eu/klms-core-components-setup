@@ -10,6 +10,7 @@ config.load_incluster_config()
 # Keycloak admin credentials
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN")
 KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
+KEYCLOAK_ADMIN_EMAIL = os.getenv("KEYCLOAK_ADMIN_EMAIL", "info@stelar.gr")
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM")
 KEYCLOAK_URL = "http://keycloak:" + os.getenv("KEYCLOAK_PORT")
 
@@ -461,7 +462,17 @@ def main():
     admin_id = keycloak_admin.get_user_id("admin")
     admin_rep = keycloak_admin.get_user(admin_id)
     admin_rep['attributes'] = {'is_admin': True}  
+    admin_rep['firstName'] = 'STELAR'
+    admin_rep['lastName'] = 'Administrator'
+    admin_rep['email'] = KEYCLOAK_ADMIN_EMAIL
     keycloak_admin.update_user(admin_id, admin_rep)
+
+    # Set the configuration for the realm accomodating STELAR
+    realm_rep = keycloak_admin.get_realm(KEYCLOAK_REALM)
+    realm_rep["displayName"] = "STELAR SSO"
+    realm_rep["accessTokenLifespan"] = 10800
+    realm_rep["loginTheme"] = "keycloakify-starter"
+    keycloak_admin.update_realm(KEYCLOAK_REALM, realm_rep)
 
     # Create the registry bucket
     create_bucket("registry")
