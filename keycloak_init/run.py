@@ -467,6 +467,10 @@ def main():
     admin_rep['email'] = KEYCLOAK_ADMIN_EMAIL
     keycloak_admin.update_user(admin_id, admin_rep)
 
+    # Create the secret for the admin user ID to be available to the namespace
+    # This ensures that the user created as CKAN admin has the same UUID as the Keycloak Admin.
+    apply_secret_to_cluster(create_k8s_secret("stelar-admin-id", KUBE_NAMESPACE, {"id":admin_rep['id']}))
+
     # Set the configuration for the realm accomodating STELAR
     realm_rep = keycloak_admin.get_realm(KEYCLOAK_REALM)
     realm_rep["displayName"] = "STELAR SSO"

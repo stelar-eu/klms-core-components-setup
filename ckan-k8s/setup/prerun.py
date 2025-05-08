@@ -162,6 +162,7 @@ def create_sysadmin():
     name = os.environ.get("CKAN_SYSADMIN_NAME")
     password = os.environ.get("CKAN_SYSADMIN_PASSWORD")
     email = os.environ.get("CKAN_SYSADMIN_EMAIL")
+    id = os.environ.get("STELAR_SYSADMIN_ID")
 
     if name and password and email:
 
@@ -181,6 +182,7 @@ def create_sysadmin():
             "user",
             "add",
             name,
+            "id=" + id,
             "password=" + password,
             "email=" + email,
         ]
