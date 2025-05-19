@@ -1,7 +1,20 @@
-#!/bin/sh
+#!/bin/bash
+
+handle_script_error() {
+    echo "An error occurred in line $1, execution is aborted."
+    # Uncomment the following line to keep the container running for debugging
+    #  echo "Container will not exit, you can debug the issue."
+    #  sleep 10000
+    exit 1
+}
+
+
 
 # Check the first argument passed to the container
 if [ "$1" = "setup" ]; then
+
+    trap 'handle_script_error $LINENO' ERR
+
     echo "[CKAN_SETUP] Running setup CKAN phase..."
     echo " "
 
@@ -31,7 +44,7 @@ if [ "$1" = "setup" ]; then
 
     # Pass the normal datapusher api_token to ckan.ini
     echo "[CKAN_SETUP] Setting up ckan.datapusher.api_token in the CKAN config file..."
-    ckan config-tool $CKAN_INI "ckan.datapusher.api_token=$(ckan -c $CKAN_INI user token add ckan_admin datapusher | tail -n 1 | tr -d '\t')"
+    ckan config-tool $CKAN_INI "ckan.datapusher.api_token=$(ckan -c $CKAN_INI user token add admin datapusher | tail -n 1 | tr -d '\t')"
     echo " "
 
     # Run any startup scripts provided by images extending this one

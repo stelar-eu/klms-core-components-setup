@@ -112,7 +112,7 @@ def issue_api_token():
 
     try:
         command = (
-            "ckan user token add ckan_admin api_token | grep -A 1 \"API Token created:\" | tail -n 1 | tr -d '\t '"
+            "ckan user token add admin api_token | grep -A 1 \"API Token created:\" | tail -n 1 | tr -d '\t '"
         )
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output = result.stdout.strip()
