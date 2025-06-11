@@ -1,3 +1,27 @@
+-- Create a View for the accessible packages per user. This aligns with the authorization model of STELAR KLMS
+CREATE OR REPLACE VIEW klms.accessible_packages_per_user AS
+
+-- PRIVATE PACKAGES (only accessible to members)
+SELECT
+    p.*,
+    m.table_id AS user_access_id
+FROM public.package p
+JOIN public.member m
+    ON p.owner_org = m.group_id
+WHERE p.private = true
+  AND m.table_name = 'user'
+  AND m.state = 'active'
+
+UNION
+
+-- PUBLIC PACKAGES (accessible to everyone, so join with all users)
+SELECT
+    p.*,
+    u.id AS user_access_id
+FROM public.package p
+CROSS JOIN public."user" u
+WHERE p.private = false;
+
 
 -- Create a view for temporal extents of published datasets (based on their extras):
 -- IMPORTANT! Special handling for open intervals (i.e., missing start or end dates).
