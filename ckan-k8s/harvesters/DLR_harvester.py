@@ -1,16 +1,8 @@
-import os
-import pandas as pd
-import geopandas as gpd
-import math
-import numpy as np
-import collections
-from iso639 import Lang, iter_langs
-
+from iso639 import iter_langs
 import json
 import re
-import requests
-import shapely
-from shapely.geometry import shape, Polygon
+from shapely.geometry import Polygon
+from stelar.client import Client, Dataset
 
 ##############################################################################
 # Applicable to harvest EO data assets available from German Aerospace Center (DLR):
@@ -60,6 +52,22 @@ def getLanguageCodes(language_en):
         
     return lang
 
+
+def slugify_title(title: str) -> str:
+    """
+    Convert a string into a URL-friendly “slug”:
+    - lowercase
+    - trim leading/trailing whitespace
+    - remove non-alphanumeric characters (except spaces)
+    - replace runs of whitespace with single hyphens
+    """
+    slug = title.lower().strip()
+    # Remove any character that is not a letter, number, or space
+    slug = re.sub(r'[^a-z0-9\s]', '', slug)
+    # Replace one or more spaces with a single hyphen
+    slug = re.sub(r'\s+', '-', slug)
+    return slug
+
 def bbox(left, bottom, right, top):
     """ Create a Polygon geometry representing a bounding box from two pairs of (lon, lat) coordinates in WGS84 (EPSG:4326).
     
@@ -78,7 +86,7 @@ def bbox(left, bottom, right, top):
     # Covert it to GeoJSON as required by CKAN
     # return json.dumps(shapely.geometry.mapping(poly))
 
-def ingest_dlr_metadata(json_file):
+def ingest_dlr_metadata(json_file, c: Client):
     """ Ingest a data source from DLR into the Data Catalog (CKAN) according to the given metadata (JSON).
     
     Args:
@@ -133,43 +141,78 @@ def ingest_dlr_metadata(json_file):
         if isinstance(author, list) and len(author)>0 and author[0]['@type'] == 'Person':
             author_name = author[0]['name']
     
-    # Construct a JSON for each data source (CKAN package)
-    # IMPORTANT! NO CKAN resources will be associated with each package
-    pub_metadata = {
-        'basic_metadata': {
-            'title': input_dict['name'],
-            'notes': notes,  
-            'url': input_dict['url'],
-    #        'license_id': 'other-closed',         # No CKAN license suitable for DLR
-            'private' : False,  # Dataset will be publicly accessible
-            'tags': tags  # Original keywords conforming to CKAN rules
-        },
-        'extra_metadata': {
-            'alternate_identifier': doi,
-            'documentation': input_dict['documentation'],
-            'license': next((value for key,value in input_dict.items() if key == 'license'), None),
-            'theme':[input_dict['additionalType']],
-            'language': [input_dict['inLanguage']],
-            'spatial': spatial.wkt,
-            'temporal_start': temporal_start,
-            'temporal_end': temporal_end,
-            'contact_name': author_name,
-            'contact_email': next((value for key,value in input_dict.items() if key == 'contact'), None),
-            'custom_tags': custom_tags   # Any original keywords NOT conforming to CKAN rules
-            }
-        }
-    
-    # Make a POST request to the KLMS API with the metadata
-    pub_response = requests.post(KLMS_API+'catalog/publish', json=pub_metadata, headers=headers)
+    # # Construct a JSON for each data source (CKAN package)
+    # # IMPORTANT! NO CKAN resources will be associated with each package
+    # pub_metadata = {
+    #     'basic_metadata': {
+    #         'title': input_dict['name'],
+    #         'notes': notes,  
+    #         'url': input_dict['url'],
+    # #        'license_id': 'other-closed',         # No CKAN license suitable for DLR
+    #         'private' : False,  # Dataset will be publicly accessible
+    #         'tags': tags  # Original keywords conforming to CKAN rules
+    #     },
+    #     'extra_metadata': {
+    #         'alternate_identifier': doi,
+    #         'documentation': input_dict['documentation'],
+    #         'license': next((value for key,value in input_dict.items() if key == 'license'), None),
+    #         'theme':[input_dict['additionalType']],
+    #         'language': [input_dict['inLanguage']],
+    #         'spatial': spatial.wkt,
+    #         'temporal_start': temporal_start,
+    #         'temporal_end': temporal_end,
+    #         'contact_name': author_name,
+    #         'contact_email': next((value for key,value in input_dict.items() if key == 'contact'), None),
+    #         'custom_tags': custom_tags   # Any original keywords NOT conforming to CKAN rules
+    #         }
+    #     }
 
-    response_dict = pub_response.json()
-    if (response_dict['success'] is True):
-        # Extract the ID of the newly created package
-        pid = response_dict['result'][0]['result']['id']
-        print('Status Code', pub_response.status_code, '. Published new data source in CKAN with ID:' + pid)
-    else:
-        print('Status Code', pub_response.status_code, '. Data source not published in CKAN.')
-        
+    spec = {
+        "title": input_dict['name'],
+        "name": slugify_title(input_dict['name']),
+        "notes": notes,
+        "url": input_dict['url'],
+        "private": False,
+        "tags": tags,
+        "doi": doi,
+        "documentation": input_dict['documentation'],
+        "license_id": next((value for key,value in input_dict.items() if key == 'license'), None),
+        "private": False,
+        "theme": [input_dict['additionalType']],
+        "language": getLanguageCodes(input_dict['inLanguage']),
+        "spatial": spatial.wkt,
+        "temporal_start": temporal_start,
+        "temporal_end": temporal_end,
+        "contact_name": author_name,
+        "contact_email": next((value for key,value in input_dict.items() if key == 'contact'), None),
+        "custom_tags": custom_tags
+    }
+
+    try:
+        spec["organization"] = c.organizations["stelar-klms"]
+        c.datasets.create(**spec)
+    except Exception as e:
+        print(f"Error while publishing DLR metadata: {e}")
+        return None
+    
     return pid
 
+def main():
+    """ Main function to harvest DLR metadata and publish it to the Data Catalog.
+    
+    This function is called when the script is executed directly.
+    """
+    
+    # Initialize the STELAR client, using context file. Credentials can be also hardcoded here like
+    # c = Client(base_url="https://klms.stelar.gr", username='your_username', password='your_password')
+    c = Client(context='staging')
+    
+    # Path to the JSON file containing DLR metadata
+    json_file = 'path/to/dlr_metadata.json'
+    
+    # Ingest the DLR metadata
+    ingest_dlr_metadata(json_file, c)
 
+
+if __name__ == "__main__":
+    main()

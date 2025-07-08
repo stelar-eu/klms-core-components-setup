@@ -13,7 +13,7 @@ import re
 import requests
 import shapely
 from shapely.geometry import shape, Polygon
-
+from stelar.client import Client, Dataset
 #####################################################
 # Applicable to harvest these EO data sources:
 
@@ -72,6 +72,21 @@ GEE_mappings = {
     'sar':'SAR'
 }
 
+def slugify_title(title: str) -> str:
+    """
+    Convert a string into a URL-friendly “slug”:
+    - lowercase
+    - trim leading/trailing whitespace
+    - remove non-alphanumeric characters (except spaces)
+    - replace runs of whitespace with single hyphens
+    """
+    slug = title.lower().strip()
+    # Remove any character that is not a letter, number, or space
+    slug = re.sub(r'[^a-z0-9\s]', '', slug)
+    # Replace one or more spaces with a single hyphen
+    slug = re.sub(r'\s+', '-', slug)
+    return slug
+
 def bbox(left, bottom, right, top):
     """ Create a Polygon geometry representing a bounding box from two pairs of (lon, lat) coordinates in WGS84 (EPSG:4326).
     
@@ -91,13 +106,11 @@ def bbox(left, bottom, right, top):
     return json.dumps(shapely.geometry.mapping(poly))
 
 
-def ingest_earthengine_metadata(input_dict, owner_org, headers):
+def ingest_earthengine_metadata(input_dict, c: Client):
     """ Ingest a data source from Google Earth Engine into the Data Catalog (CKAN) according to the given metadata (JSON).
     
     Args:
         input_dict (dict): JSON dictionary containing the metadata as obtained from Google Earth Engine.
-        owner_org (string): The organization account name as used by CKAN (to allow dataset names from different providers).
-        headers (dict): Headers for connecting to the CKAN API (including the CKAN token).
         
     Returns:
         The identifier of the published item in the Data Catalog; None, if publishing failed.
@@ -116,12 +129,12 @@ def ingest_earthengine_metadata(input_dict, owner_org, headers):
             if len(notes) > 1000:
                 notes = notes[:997] + '...'       
 
-    # Include provider in the title to avoid conflicts with existing CKAN resources
-    # CKAN supports up to 100 characters in title; trim exceeding characters
-    if len(input_dict['title']) + len(' (' + owner_org + ')')> 100:
-        title = input_dict['title'][:(97-len(' (' + owner_org + ')'))] + '...' + ' (' + owner_org + ')'
-    else:
-        title = input_dict['title'] + ' (' + owner_org + ')'
+    # # Include provider in the title to avoid conflicts with existing CKAN resources
+    # # CKAN supports up to 100 characters in title; trim exceeding characters
+    # if len(input_dict['title']) + len(' (' + owner_org + ')')> 100:
+    #     title = input_dict['title'][:(97-len(' (' + owner_org + ')'))] + '...' + ' (' + owner_org + ')'
+    # else:
+    #     title = input_dict['title'] + ' (' + owner_org + ')'
     
     # Check if tags conform to CKAN rules
     # CKAN tags can only contain alphanumeric characters, spaces ( ), hyphens (-), underscores (_) or dots (.)
@@ -146,66 +159,99 @@ def ingest_earthengine_metadata(input_dict, owner_org, headers):
 
     # Construct a JSON for each data source (CKAN package)
     # IMPORTANT! NO CKAN resources will be associated with each package
-    pub_metadata = {
-        'basic_metadata': {
-            'title': title,
-            'notes': notes,  # CKAN supports up to 1000 characters
-            'url': next((value for key,value in input_dict.items() if key == 'url'), None),
-    #        'license_id': 'other-closed',         # No generic CKAN license for STAC
-            'private' : False,  # Dataset metadata will be publicly accessible/searchable
-            'tags': tags  # Original keywords conforming to CKAN rules
-        },
-        'extra_metadata': {
-            'alternate_identifier': next((value for key,value in input_dict.items() if key == 'id'), None),
-            'license': next((value for key,value in input_dict.items() if key == 'license'), None),
-            'theme': themes,
-            'language': ['en'],   # Ad-hoc language assigned for metadata
-            'spatial': spatial,
-            'temporal_start': next((value for key,value in input_dict.items() if key == 'state_date'), None),
-            'temporal_end': next((value for key,value in input_dict.items() if key == 'end_date'), None),
-            # Also include some extra metadata provided by this catalog
-            'provider_name': next((value for key,value in input_dict.items() if key == 'provider'), None),
-            'access_rights': next((value for key,value in input_dict.items() if key == 'terms_of_use'), None),
-            'thumbnail': next((value for key,value in input_dict.items() if key == 'thumbnail'), None),
-            'deprecated': next((value for key,value in input_dict.items() if key == 'deprecated'), None),
-            'dataset_type': next((value for key,value in input_dict.items() if key == 'type'), None)
-            }
-        }
-            
-    # STAGE #1: Publish this collection as a CKAN package
-    # Make a POST request to the KLMS API with the package metadata
-    pub_response = requests.post(KLMS_API+'catalog/publish', json=pub_metadata, headers=headers)
+    # pub_metadata = {
+    #     'basic_metadata': {
+    #         'title': title,
+    #         'notes': notes,  # CKAN supports up to 1000 characters
+    #         'url': next((value for key,value in input_dict.items() if key == 'url'), None),
+    # #        'license_id': 'other-closed',         # No generic CKAN license for STAC
+    #         'private' : False,  # Dataset metadata will be publicly accessible/searchable
+    #         'tags': tags  # Original keywords conforming to CKAN rules
+    #     },
+    #     'extra_metadata': {
+    #         'alternate_identifier': next((value for key,value in input_dict.items() if key == 'id'), None),
+    #         'license': next((value for key,value in input_dict.items() if key == 'license'), None),
+    #         'theme': themes,
+    #         'language': ['en'],   # Ad-hoc language assigned for metadata
+    #         'spatial': spatial,
+    #         'temporal_start': next((value for key,value in input_dict.items() if key == 'state_date'), None),
+    #         'temporal_end': next((value for key,value in input_dict.items() if key == 'end_date'), None),
+    #         # Also include some extra metadata provided by this catalog
+    #         'provider_name': next((value for key,value in input_dict.items() if key == 'provider'), None),
+    #         'access_rights': next((value for key,value in input_dict.items() if key == 'terms_of_use'), None),
+    #         'thumbnail': next((value for key,value in input_dict.items() if key == 'thumbnail'), None),
+    #         'deprecated': next((value for key,value in input_dict.items() if key == 'deprecated'), None),
+    #         'dataset_type': next((value for key,value in input_dict.items() if key == 'type'), None)
+    #         }
+    #     }
+    
+    spec = {
+        "title": input_dict['title'] + ' by Google Earth Engine',
+        "name": slugify_title(input_dict['title'] + ' by Google Earth Engine'),
+        "notes": notes,
+        "url": next((value for key,value in input_dict.items() if key == 'url'), None),
+        "license": next((value for key,value in input_dict.items() if key == 'license'), None),
+        "private": False,
+        "tags": tags,
+        "alternate_identifier": next((value for key,value in input_dict.items() if key == 'id'), None),
+        'theme': themes,
+        'language': ['en'],   # Ad-hoc language assigned for metadata
+        'spatial': spatial,
+        'temporal_start': next((value for key,value in input_dict.items() if key == 'state_date'), None),
+        'temporal_end': next((value for key,value in input_dict.items() if key == 'end_date'), None),
+        # Also include some extra metadata provided by this catalog
+        'provider_name': next((value for key,value in input_dict.items() if key == 'provider'), None),
+        'access_rights': next((value for key,value in input_dict.items() if key == 'terms_of_use'), None),
+        'thumbnail': next((value for key,value in input_dict.items() if key == 'thumbnail'), None),
+        'deprecated': next((value for key,value in input_dict.items() if key == 'deprecated'), None),
+        'dataset_type': next((value for key,value in input_dict.items() if key == 'type'), None)
+    }
 
-    response_dict = pub_response.json()
-    if ('success' in response_dict) and (response_dict['success'] is True):
-        # Extract the ID of the newly created package
-        pid = response_dict['result'][0]['result']['id']
-        print('Status Code:', pub_response.status_code,'. New data source', title, 'published in CKAN with ID:' + pid)
-    else:
-        print('Status Code:', pub_response.text,'. Data source ', title, 'not published in CKAN.')
+
+    try:
+        spec["organization"] = c.organizations["stelar-klms"]
+        d = c.datasets.create(**spec)
+        pid = str(d.id)
+    except:
+        return None
+    
         
     # STAGE #2: Also publish the original JSON metadata as a resource
     rid = None
     if pid != None and json_href:
-        # Put the details regarding the resource into a dictionary:
-        resource_metadata = {'resource_metadata' : {
-            'package_id': pid,  # MUST specify the id of the package (data source) assigned by CKAN
-            'name': title + ' specifications',
-            'description': 'Specifications about ' + title + ' data in JSON format',
-            'format': 'JSON',
-            'license': next((value for key,value in input_dict.items() if key == 'license'), None),
-            'resource_type': 'other',
-            'url': json_href
-        }}
 
-        # Make a POST request to the KLMS API with the resource metadata
-        res_response = requests.post(KLMS_API+'resource/link', json=resource_metadata, headers=headers)
-
-        response_dict = json.loads(res_response.text)
-        if (response_dict['success'] is True):
-            # Extract the ID of the newly created resource
-            rid = response_dict['result']['id']
-            print('Created new resource with ID:' + rid)
-    
+        try:
+            r = d.add_resource({
+                "name": title + ' specifications',
+                "description": 'Specifications about ' + title + ' data in JSON format',
+                "format": "JSON",
+                "license": next((value for key,value in input_dict.items() if key == 'license'), None),
+                "resource_type": "other",
+                "url": json_href,
+                "relation": "reference",
+            })
+            rid = str(r.id)
+        except Exception as e:
+            print(f"Error while publishing DLR metadata: {e}")
+            return None
     return pid, rid
 
+
+
+def main():
+    """ Main function to harvest DLR metadata and publish it to the Data Catalog.
+    This function is called when the script is executed directly.
+    """
+    # Initialize the STELAR client, using context file. Credentials can be also hardcoded here like
+    # c = Client(base_url="https://klms.stelar.gr", username='your_username', password='your_password')
+    c = Client(context='staging')
+    
+    # Path to the JSON file containing DLR metadata
+    json_file = 'path/to/dlr_metadata.json'
+    
+    # Ingest the DLR metadata
+    ingest_earthengine_metadata(json_file, c)
+
+
+if __name__ == "__main__":
+    main()
