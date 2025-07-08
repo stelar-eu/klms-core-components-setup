@@ -11,6 +11,7 @@ import re
 import requests
 import shapely
 from shapely.geometry import shape, Polygon
+from stelar.client import Client
 
 ##############################################################################
 # Applicable to harvest these EO data sources:
@@ -97,7 +98,23 @@ def bbox(left, bottom, right, top):
     return json.dumps(shapely.geometry.mapping(poly))
 
 
-def ingest_stac_metadata(input_dict, owner_org, headers):
+def slugify_title(title: str) -> str:
+    """
+    Convert a string into a URL-friendly “slug”:
+    - lowercase
+    - trim leading/trailing whitespace
+    - remove non-alphanumeric characters (except spaces)
+    - replace runs of whitespace with single hyphens
+    """
+    slug = title.lower().strip()
+    # Remove any character that is not a letter, number, or space
+    slug = re.sub(r'[^a-z0-9\s]', '', slug)
+    # Replace one or more spaces with a single hyphen
+    slug = re.sub(r'\s+', '-', slug)
+    return slug
+
+
+def ingest_stac_metadata(input_dict, c: Client):
     """ Ingest a data source conforming to STAC into the Data Catalog (CKAN) according to the given metadata (JSON).
     
     Args:
@@ -110,12 +127,12 @@ def ingest_stac_metadata(input_dict, owner_org, headers):
     """
     pid = None
     
-    # Include provider in the title to avoid conflicts with existing CKAN resources
-    # CKAN supports up to 100 characters in title; trim exceeding characters
-    if len(input_dict['title']) + len(' (' + owner_org + ')')> 200:
-        title = input_dict['title'][:(197-len(' (' + owner_org + ')'))] + '...' + ' (' + owner_org + ')'
-    else:
-        title = input_dict['title'] + ' (' + owner_org + ')'
+    # # Include provider in the title to avoid conflicts with existing CKAN resources
+    # # CKAN supports up to 100 characters in title; trim exceeding characters
+    # if len(input_dict['title']) + len(' (' + owner_org + ')')> 200:
+    #     title = input_dict['title'][:(197-len(' (' + owner_org + ')'))] + '...' + ' (' + owner_org + ')'
+    # else:
+    #     title = input_dict['title'] + ' (' + owner_org + ')'
     
     # CKAN supports up to 1000 characters in abstract; trim exceeding characters
     if len(input_dict['description']) > 10000:
@@ -209,64 +226,100 @@ def ingest_stac_metadata(input_dict, owner_org, headers):
 
     # Construct a JSON for each data source (CKAN package)
     # IMPORTANT! NO CKAN resources will be associated with each package
-    pub_metadata = {
-        'basic_metadata': {
-            'title': title,
-            'notes': notes,  # CKAN supports up to 1000 characters
-            'url': url,
-    #        'license_id': 'other-closed',         # No generic CKAN license for STAC
-            'private' : False,  # Dataset metadata will be publicly accessible/searchable
-            'tags': tags  # Original keywords conforming to CKAN rules
-        },
-        'extra_metadata': {
-            'alternate_identifier': alt_href,
-            'documentation': doc,
-            'license': license,  # Specify here the license (may be a URL, link to a PDF, etc.)
-            'theme': themes,
-            'language': ['en'],   # Ad-hoc language assigned for metadata
-            'spatial': spatial,
-            'temporal_start': temporal_start,
-            'temporal_end': temporal_end,
-            'contact_name': author_name,
-            'contact_email': next((value for key,value in input_dict.items() if key == 'contact'), None),
-            'custom_tags': custom_tags   # Any original keywords NOT conforming to CKAN rules
-            }
-        }
-
-    # STAGE #1: Publish this collection as a CKAN package
-    # Make a POST request to the KLMS API with the package metadata
-    pub_response = requests.post(KLMS_API+'catalog/publish', json=pub_metadata, headers=headers)
-
-    response_dict = pub_response.json()
-    if ('success' in response_dict) and (response_dict['success'] is True):
-        # Extract the ID of the newly created package
-        pid = response_dict['result'][0]['result']['id']
-        print('Status Code:', pub_response.status_code,'. New data source', title, 'published in CKAN with ID:' + pid)
+    # pub_metadata = {
+    #     'basic_metadata': {
+    #         'title': title,
+    #         'notes': notes,  # CKAN supports up to 1000 characters
+    #         'url': url,
+    # #        'license_id': 'other-closed',         # No generic CKAN license for STAC
+    #         'private' : False,  # Dataset metadata will be publicly accessible/searchable
+    #         'tags': tags  # Original keywords conforming to CKAN rules
+    #     },
+    #     'extra_metadata': {
+    #         'alternate_identifier': alt_href,
+    #         'documentation': doc,
+    #         'license': license,  # Specify here the license (may be a URL, link to a PDF, etc.)
+    #         'theme': themes,
+    #         'language': ['en'],   # Ad-hoc language assigned for metadata
+    #         'spatial': spatial,
+    #         'temporal_start': temporal_start,
+    #         'temporal_end': temporal_end,
+    #         'contact_name': author_name,
+    #         'contact_email': next((value for key,value in input_dict.items() if key == 'contact'), None),
+    #         'custom_tags': custom_tags   # Any original keywords NOT conforming to CKAN rules
+    #         }
+    #     }
+    
+    max_length = 100
+    base_title = input_dict['title'] + ' by STAC'
+    if len(base_title) > max_length:
+        truncated_title = base_title[:max_length - 3] + '...'
     else:
-        print('Status Code:', pub_response.text,'. Data source ', title, 'not published in CKAN.')
+        truncated_title = base_title
+
+    spec = {
+        "title": truncated_title,
+        "name": slugify_title(truncated_title),
+        "notes": notes,
+        "url": url,
+        "private": False,  # Dataset metadata will be publicly accessible/searchable
+        "tags": tags,  # Original keywords conforming to CKAN rules
+        "license": license,
+        "alternate_identifier": alt_href,
+        "documentation": doc,
+        "theme": themes,
+        "language": ['en'],   # Ad-hoc language assigned for metadata
+        "spatial": spatial,
+        "temporal_start": temporal_start,
+        "temporal_end": temporal_end,
+        "contact_name": author_name,
+        "contact_email": next((value for key,value in input_dict.items() if key == 'contact'), None),
+        "custom_tags": custom_tags,   # Any original keywords NOT conforming to CKAN rules
+    }
+    
+
+    try:
+        spec["organization"] = c.organizations["stelar-klms"]
+        d = c.datasets.create(**spec)
+        print('Created new dataset with ID:', d.id)
+        pid = str(d.id)
+    except Exception as e:
+        print('Error while preparing metadata for STAC item:', input_dict['title'], 'Error:', str(e))
+        return None, None
+
 
     # STAGE #2: Also publish the original JSON metadata as a resource
     rid = None
     if pid != None and json_href:
         # Put the details regarding the resource into a dictionary:
-        resource_metadata = {'resource_metadata' : {
-            'package_id': pid,  # MUST specify the id of the package (data source) assigned by CKAN
-            'name': input_dict['title'] + ' specifications',
-            'description': 'Specifications about ' + input_dict['title'] + ' data in JSON format',
-            'format': 'JSON',
-            'license': license,
-            'resource_type': 'other',
-            'url': json_href
-        }}
-
-        # Make a POST request to the KLMS API with the resource metadata
-        res_response = requests.post(KLMS_API+'resource/link', json=resource_metadata, headers=headers)
-
-        response_dict = json.loads(res_response.text)
-        if (response_dict['success'] is True):
-            # Extract the ID of the newly created resource
-            rid = response_dict['result']['id']
-            print('Created new resource with ID:' + rid)
+        try:
+            r = d.add_resource(
+                title=input_dict['title'] + ' specifications',
+                description='Specifications about ' + input_dict['title'] + ' data in JSON format',
+                format='JSON',
+                license=license,
+                resource_type='other',
+                url=json_href
+            )
+            rid = str(r.id)
+        except Exception as e:
+            print('Error while creating resource for STAC item:', input_dict['title'], 'Error:', str(e))
+            return pid, None
     
     return pid, rid
 
+
+def main():
+    # Initialize the STELAR client, using context file. Credentials can be also hardcoded here like
+    # c = Client(base_url="https://klms.stelar.gr", username='your_username', password='your_password')
+    c = Client(context='staging')
+    # Path to the JSON file containing DLR metadata
+    json_file = 'path/to/dlr_metadata.json'
+
+    ingest_stac_metadata(
+        input_dict=json.load(open(json_file, 'r')),
+        c=c
+    )
+
+if __name__ == "__main__":
+    main()

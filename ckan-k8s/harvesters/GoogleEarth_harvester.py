@@ -250,7 +250,7 @@ def main():
     json_file = 'path/to/dlr_metadata.json'
     
     # Ingest the DLR metadata
-    ingest_earthengine_metadata(json_file, c)
+    ingest_earthengine_metadata(json.load(open(json_file, 'r')), c)
 
 
 if __name__ == "__main__":
