@@ -61,29 +61,42 @@ GROUP BY id;
 
 CREATE OR REPLACE VIEW package_theme_array AS 
   SELECT id, array_agg(trim(theme::text, '"')) AS arr_values 
-  FROM ( SELECT p.id, json_array_elements(e.value::json) AS theme 
-       FROM package p, package_extra e 
-       WHERE e.package_id=p.id 
-       AND e.key='theme' 
-       AND is_valid_json(e.value) 
+  FROM ( SELECT p.id, json_array_elements(REPLACE(SUBSTR(e.value, 2, LENGTH(e.value)-2), '''', '"')::json) AS theme
+       FROM package p, package_extra e
+       WHERE e.package_id=p.id
+       AND e.key='theme'
+       AND e.value LIKE '"[%]"' AND e.value !='"[]"' AND is_valid_json(e.value)
        AND p.state='active') t 
  GROUP BY id;
+
+ SELECT p.id, json_array_elements(REPLACE(SUBSTR(e.value, 2, LENGTH(e.value)-2), '''', '"')::json) AS theme
+       FROM package p, package_extra e
+       WHERE e.package_id=p.id
+       AND e.key='theme'
+       AND e.value LIKE '"[%]"' AND e.value !='"[]"' AND is_valid_json(e.value)
+       AND p.state='active'
+;
 
 
 -- View of LANGUAGES characterizing each dataset (CKAN package):
 
 CREATE OR REPLACE VIEW package_language_array AS 
   SELECT id, array_agg(trim(language::text, '"')) AS arr_values 
-  FROM ( SELECT p.id, json_array_elements(e.value::json) AS language 
-       FROM package p, package_extra e 
-       WHERE e.package_id=p.id 
-       AND e.key='language' 
-       AND is_valid_json(e.value) 
+  FROM ( SELECT p.id, json_array_elements(REPLACE(SUBSTR(e.value, 2, LENGTH(e.value)-2), '''', '"')::json) AS language
+       FROM package p, package_extra e
+       WHERE e.package_id=p.id
+       AND e.key='language'
+       AND e.value LIKE '"[%]"' AND e.value !='"[]"' AND is_valid_json(e.value)
        AND p.state='active') t 
   GROUP BY id;
 
-
-
+SELECT p.id, json_array_elements(REPLACE(SUBSTR(e.value, 2, LENGTH(e.value)-2), '''', '"')::json) AS language
+       FROM package p, package_extra e
+       WHERE e.package_id=p.id
+       AND e.key='language'
+       AND e.value LIKE '"[%]"' AND e.value !='"[]"' AND is_valid_json(e.value)
+       AND p.state='active'
+;
 -- LICENSE (from extras)
 -- FIXME: Include license spec from table 'package'
 
@@ -157,7 +170,7 @@ CREATE OR REPLACE VIEW package_organization_array AS
 -- NUM_ROWS as specified in the extras of the PACKAGE:
 
 CREATE OR REPLACE VIEW package_num_rows AS 
-  SELECT p.id, e.value
+  SELECT p.id, CAST(TRIM(BOTH '"' FROM e.value) AS NUMERIC) AS value
   FROM public.package p, public.package_extra e
   WHERE p.id = e.package_id
   AND p.state = 'active'
@@ -166,18 +179,21 @@ CREATE OR REPLACE VIEW package_num_rows AS
 
 -- DAYS_ACTIVE as specified in the extras of the PACKAGE:
 
-CREATE OR REPLACE VIEW package_days_active AS 
-  SELECT p.id, e.value
+CREATE VIEW package_days_active AS 
+  SELECT p.id, 
+         CAST(TRIM(BOTH '"' FROM e.value) AS NUMERIC) AS value
   FROM public.package p, public.package_extra e
   WHERE p.id = e.package_id
   AND p.state = 'active'
-  AND e.key = 'days_active';
+  AND e.key = 'days_active'
+  AND e.value IS NOT NULL;
 
 
 -- VELOCITY as specified in the extras of the PACKAGE:
 
 CREATE OR REPLACE VIEW package_velocity AS 
-  SELECT p.id, e.value
+  SELECT p.id, 
+      CAST(TRIM(BOTH '"' FROM e.value) AS NUMERIC) AS value
   FROM public.package p, public.package_extra e
   WHERE p.id = e.package_id
   AND p.state = 'active'
