@@ -5,7 +5,6 @@ import geopandas as gpd
 import math
 import numpy as np
 import collections
-from iso639 import Lang, iter_langs
 
 import urllib.request
 import json
@@ -100,10 +99,16 @@ def bbox(left, bottom, right, top):
         A GeoJson representing the given bounding box in WGS84.
     """
     # Create a shapely geometry from the given coordinates    
-    poly = Polygon([[left, bottom], [left, top], [right, top], [right, bottom]]) 
+    poly = Polygon([
+        (left, bottom),
+        (left, top),
+        (right, top),
+        (right, bottom),
+        (left, bottom)
+    ])
 
-    # Covert it to GeoJSON as required by CKAN
-    return json.dumps(shapely.geometry.mapping(poly))
+    # Return a native Python dict (GeoJSON) so the CKAN client can serialize it properly
+    return shapely.geometry.mapping(poly)
 
 
 def ingest_earthengine_metadata(input_dict, c: Client):
@@ -116,6 +121,11 @@ def ingest_earthengine_metadata(input_dict, c: Client):
         The identifier of the published item in the Data Catalog; None, if publishing failed.
     """
     pid = None
+
+    # Skip any deprecated items
+    if input_dict.get('deprecated'):
+        print(f"Skipping deprecated dataset: {input_dict['title']}")
+        return None, None
     
     # Description about this data source
     notes = input_dict['title'] # Initially set to the title
@@ -156,6 +166,7 @@ def ingest_earthengine_metadata(input_dict, c: Client):
     if 'bbox' in input_dict:
         bounds = list(map(float, input_dict['bbox'].split(',')))   
         spatial = bbox(bounds[0], bounds[1], bounds[2], bounds[3])
+
 
     # Construct a JSON for each data source (CKAN package)
     # IMPORTANT! NO CKAN resources will be associated with each package
@@ -212,7 +223,8 @@ def ingest_earthengine_metadata(input_dict, c: Client):
         spec["organization"] = c.organizations["stelar-klms"]
         d = c.datasets.create(**spec)
         pid = str(d.id)
-    except:
+    except Exception as e:
+        print(f"Error while publishing DLR metadata: {input_dict['title']} : {e}")
         return None
     
         
@@ -221,12 +233,12 @@ def ingest_earthengine_metadata(input_dict, c: Client):
     if pid != None and json_href:
 
         try:
-            r = d.add_resource({
-                "name": title + ' specifications',
-                "description": 'Specifications about ' + title + ' data in JSON format',
+            r = d.add_resource(**{
+                "name": input_dict['title'] + ' specifications',
+                "description": 'Specifications about ' + input_dict['title'] + 'in JSON format',
                 "format": "JSON",
                 "license": next((value for key,value in input_dict.items() if key == 'license'), None),
-                "resource_type": "other",
+                "resource_type": "service",
                 "url": json_href,
                 "relation": "reference",
             })
@@ -244,13 +256,19 @@ def main():
     """
     # Initialize the STELAR client, using context file. Credentials can be also hardcoded here like
     # c = Client(base_url="https://klms.stelar.gr", username='your_username', password='your_password')
-    c = Client(context='staging')
+    c = Client(context='default')
     
     # Path to the JSON file containing DLR metadata
-    json_file = 'path/to/dlr_metadata.json'
-    
-    # Ingest the DLR metadata
-    ingest_earthengine_metadata(json.load(open(json_file, 'r')), c)
+    json_file = './Google/gee_catalog.json'
+
+    # Load the JSON file containing the metadata
+    with open(json_file, 'r') as f:
+        records = json.load(f)
+
+    # Iterate through each record and ingest the metadata
+    for record in records:
+        ingest_earthengine_metadata(record, c)
+        print(f"Ingested record: {record['title']}")
 
 
 if __name__ == "__main__":
