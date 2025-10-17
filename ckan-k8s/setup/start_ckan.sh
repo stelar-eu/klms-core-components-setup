@@ -64,15 +64,31 @@ elif [ "$1" = "start-server" ]; then
 
     cp /srv/stelar/config/ckan.ini /srv/app/ckan.ini
 
+    NUM_PROCESSES=${UWSGI_PROCESSES:-4}
+    NUM_THREADS=${UWSGI_THREADS:-1}
+    SOCKET_TIMEOUT=${UWSGI_HARAKIRI:-60} 
+
     # Set the common UWSGI options
+    # UWSGI_OPTS="--plugins http,python \
+    #             --socket /tmp/uwsgi.sock \
+    #             --wsgi-file /srv/app/wsgi.py \
+    #             --http 0.0.0.0:5000 \
+    #             --master --enable-threads \
+    #             --lazy-apps \
+    #             -p 2 -L -b 32768 --vacuum \
+    #             --harakiri $UWSGI_HARAKIRI"
+
+    # Set the UWSGI custom STELAR options, as the default ones weren't scaling well.
     UWSGI_OPTS="--plugins http,python \
-                --socket /tmp/uwsgi.sock \
-                --wsgi-file /srv/app/wsgi.py \
-                --http 0.0.0.0:5000 \
-                --master --enable-threads \
-                --lazy-apps \
-                -p 2 -L -b 32768 --vacuum \
-                --harakiri $UWSGI_HARAKIRI"
+            --socket /tmp/uwsgi.sock \
+            --wsgi-file /srv/app/wsgi.py \
+            --http 0.0.0.0:5000 \
+            --master --enable-threads \
+            --lazy-apps \
+            -p $NUM_PROCESSES \
+            --threads $NUM_THREADS \
+            -L -b 32768 --vacuum \
+            --harakiri $SOCKET_TIMEOUT"
 
     echo "[CKAN_RUN] Starting supervisord..."
     # Start supervisord
